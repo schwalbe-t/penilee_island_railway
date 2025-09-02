@@ -7,9 +7,21 @@ import org.lwjgl.opengl.GL
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.NULL
 
-class Window {
+class Window: Texture {
 
-    val id: Long
+    private val id: Long
+    override val width: Int
+        get() = MemoryStack.stackPush().use { stack ->
+            val width = stack.mallocInt(1)
+            glfwGetFramebufferSize(this.id, width, null)
+            return width.get(0)
+        }
+    override val height: Int
+        get() = MemoryStack.stackPush().use { stack ->
+            val height = stack.mallocInt(1)
+            glfwGetFramebufferSize(this.id, null, height)
+            return height.get(0)
+        }
 
     constructor(width: Int, height: Int, name: String) {
         check(glfwInit()) { "Failed to initialize GLFW" }
@@ -32,41 +44,18 @@ class Window {
         update: () -> Unit, 
         render: (Camera, Framebuffer) -> Unit
     ) {
-        val destTex = Texture(this.width(), this.height())
-        val dest = Framebuffer(destTex)
+        val dest = Framebuffer(0, this)
         val screen = Camera()
         while(!glfwWindowShouldClose(this.id)) {
             glfwPollEvents()
             screen.setHorizontalFov(
-                horizontalFov, this.width().toFloat() / this.height().toFloat()
+                horizontalFov, this.width.toFloat() / this.height.toFloat()
             )
-            destTex.resizeFast(this.width(), this.height())
             update()
             render(screen, dest)
-            this.displayTexture(destTex)
             glfwSwapBuffers(this.id)
         }
         dest.destroy()
-        destTex.destroy()
-    }
-
-    fun width(): Int {
-        MemoryStack.stackPush().use { stack ->
-            val width = stack.mallocInt(1)
-            glfwGetFramebufferSize(this.id, width, null)
-            return width.get(0)
-        }
-    }
-    fun height(): Int {
-        MemoryStack.stackPush().use { stack ->
-            val height = stack.mallocInt(1)
-            glfwGetFramebufferSize(this.id, null, height)
-            return height.get(0)
-        }
-    }
-
-    fun displayTexture(tex: Texture) {
-        // TODO! not yet implemented
     }
 
 }

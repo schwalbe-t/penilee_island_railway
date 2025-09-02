@@ -16,12 +16,14 @@ dependencies {
     implementation("org.lwjgl:lwjgl-glfw")
     implementation("org.lwjgl:lwjgl-opengl")
     implementation("org.lwjgl:lwjgl-openxr")
+    implementation("org.lwjgl:lwjgl-stb")
     implementation("org.joml:joml:1.10.5")
 
     runtimeOnly("org.lwjgl:lwjgl::natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-glfw::natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-opengl::natives-windows")
     runtimeOnly("org.lwjgl:lwjgl-openxr::natives-windows")
+    runtimeOnly("org.lwjgl:lwjgl-stb::natives-windows")
 }
 
 application {
@@ -37,5 +39,8 @@ java {
 kotlin {
     sourceSets {
         main { kotlin.srcDirs("src") }
+    }
+    sourceSets.all {
+        languageSettings.optIn("kotlin.ExperimentalUnsignedTypes")
     }
 }
