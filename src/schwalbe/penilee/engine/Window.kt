@@ -39,21 +39,29 @@ class Window: Texture {
     fun show() = glfwShowWindow(this.id)
     fun hide() = glfwHideWindow(this.id)
 
+    fun shouldClose(): Boolean = glfwWindowShouldClose(this.id)
+    fun pollEvents() = glfwPollEvents()
+    fun swapBuffers() = glfwSwapBuffers(this.id)
+
+    fun framebuffer(): Framebuffer = Framebuffer(0, this)
+
     fun runLoop(
         horizontalFov: Float,
-        update: () -> Unit, 
-        render: (Camera, Framebuffer) -> Unit
+        update: (Float) -> Unit, 
+        render: (Camera, Framebuffer, Float) -> Unit
     ) {
-        val dest = Framebuffer(0, this)
+        val dest = this.framebuffer()
         val screen = Camera()
-        while(!glfwWindowShouldClose(this.id)) {
-            glfwPollEvents()
+        val deltaTimeState = DeltaTimeState()
+        while(!this.shouldClose()) {
+            this.pollEvents()
+            val deltaTime: Float = deltaTimeState.computeDeltaTime()
+            update(deltaTime)
             screen.setHorizontalFov(
                 horizontalFov, this.width.toFloat() / this.height.toFloat()
             )
-            update()
-            render(screen, dest)
-            glfwSwapBuffers(this.id)
+            render(screen, dest, deltaTime)
+            this.swapBuffers()
         }
         dest.destroy()
     }

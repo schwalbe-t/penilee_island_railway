@@ -42,5 +42,6 @@ kotlin {
     }
     sourceSets.all {
         languageSettings.optIn("kotlin.ExperimentalUnsignedTypes")
+        languageSettings.optIn("kotlin.time.ExperimentalTime")
     }
 }

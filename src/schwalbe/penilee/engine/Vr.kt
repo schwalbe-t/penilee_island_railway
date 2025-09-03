@@ -2,6 +2,7 @@
 package schwalbe.penilee.engine
 
 import schwalbe.penilee.engine.gfx.*
+import kotlin.math.abs
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.openxr.KHROpenGLEnable.*
@@ -200,7 +201,7 @@ class VrContext(
     val space: XrSpace,
     val cameras: Array<Camera>
 ) {
-
+    
     fun beginFrame(stack: MemoryStack): Long {        
         // wait for the next frame
         val frameWaitInfo = XrFrameWaitInfo.calloc(stack)
@@ -341,14 +342,20 @@ class VrContext(
     }
 
     fun runLoop(
-        update: () -> Unit, 
-        render: (Camera, Framebuffer) -> Unit
+        window: Window,
+        update: (Float) -> Unit, 
+        render: (Camera, Framebuffer, Float) -> Unit
     ) {
-        while(true) {
+        val windowDest: Framebuffer = window.framebuffer()
+        val windowScreen = Camera()
+        val deltaTimeState = DeltaTimeState()
+        while(!window.shouldClose()) {
+            window.pollEvents()
+            var deltaTime: Float = deltaTimeState.computeDeltaTime()
             MemoryStack.stackPush().use { stack ->
                 val predDispTime: Long = this.beginFrame(stack)
                 this.pollEvents(stack)
-                update()
+                update(deltaTime)
                 this.locateViews(stack, predDispTime)
                 val views: XrView.Buffer = this.locateViews(stack, predDispTime)
                 this.updateCameras(views)
@@ -356,11 +363,28 @@ class VrContext(
                     for(eye in 0..<this.viewCount) {
                         val camera = this.cameras[eye]
                         val framebuffer = this.imageFBOs[imgIndex][eye]
-                        render(camera, framebuffer)
+                        render(camera, framebuffer, deltaTime)
                     }
                 }
                 this.submitFrame(stack, predDispTime, views)
             }
+            val eyeN: Float = this.cameras.size.toFloat()
+            var hFov: Float = 0f
+            for(eye in this.cameras) {
+                hFov += abs(eye.fovLeft) + abs(eye.fovRight)
+                windowScreen.pos.add(eye.pos)
+                windowScreen.dir.add(eye.dir)
+                windowScreen.up.add(eye.up)
+            }
+            hFov /= eyeN
+            windowScreen.pos.div(eyeN)
+            windowScreen.dir.div(eyeN)
+            windowScreen.up.div(eyeN)
+            windowScreen.setHorizontalFov(
+                hFov, window.width.toFloat() / window.height.toFloat()
+            )
+            render(windowScreen, windowDest, deltaTime)
+            window.swapBuffers()
         }
     }
 

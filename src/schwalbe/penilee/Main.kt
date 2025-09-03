@@ -11,82 +11,88 @@ val DEFAULT_FOV: Double = (PI * 2.0 / 360.0) * 60.0
 fun main() {
     val window = Window(1280, 720, "Penilee Island Railway")
     loadResources(
+        TEST_SHADER,
+        TEST_MODEL,
         TEST_TEXTURE
     )
     val state = GameState()
+    window.show()
     val vrContext: Boolean = withVrContext { vr ->
-        vr.runLoop(state::update, state::render)
+        vr.runLoop(window, state::update, state::render)
     }
     if(!vrContext) {
-        window.show()
         window.runLoop(DEFAULT_FOV.toFloat(), state::update, state::render)
     }
 }
 
-val TEST_TEXTURE = Texture2.ImageLoader("test.jpg")
+val TEST_SHADER = GlslLoader(
+    "res/shaders/test_vert.glsl", "res/shaders/test_frag.glsl"
+)
+val TEST_MODEL = ObjLoader(
+    "res/maxwell.obj",
+    listOf(ObjAttrib.POSITION, ObjAttrib.TEX_COORDS),
+    FaceCulling.BACK
+)
+val TEST_TEXTURE = ImageLoader("res/test.jpg")
 
 class GameState {
 
-    val shader = Shader(
-        """
-            #version 330 core
+    val camera = Camera()
+    var cameraRot: Float = 0f
 
-            layout(location = 0) in vec2 vPos;
-            layout(location = 1) in vec2 vUv;
-            
-            out vec2 fUv;
-
-            void main() {
-                gl_Position = vec4(vPos, 0.0, 1.0);
-                fUv = vUv;
-            }
-        """.trimIndent(),
-        """
-            #version 330 core
-
-            in vec2 fUv;
-
-            uniform sampler2D uTexture;
-
-            out vec4 oColor;
-
-            void main() {
-                oColor = texture(uTexture, fUv);
-            }
-        """.trimIndent()
-    )
-
-    val mesh: Mesh
+    val geometry: Geometry
 
     init {
-        this.shader.setTexture2("uTexture", TEST_TEXTURE.get())
+        TEST_SHADER.get().setMatrix4("uModelTransf", Matrix4f())
 
-        val builder = Mesh.Builder(arrayOf(
-            Pair(2, Mesh.Type.FLOAT),
-            Pair(2, Mesh.Type.FLOAT)
+        val builder = Geometry.Builder(listOf(
+            Pair(3, Geometry.Type.FLOAT),
+            Pair(2, Geometry.Type.FLOAT)
         ))
-        val a = builder.putVertex { it
-            .putFloats( 0.0f, +0.5f)
-            .putFloats(+0.5f, +1.0f)
+        val a = builder.putVertex { v -> v
+            .putFloats(-0.5f, +1.0f, 0f)
+            .putFloats(0f, 1f)
         }
-        val b = builder.putVertex { it
-            .putFloats(-0.5f, -0.5f)
-            .putFloats( 0.0f,  0.0f)
+        val b = builder.putVertex { v -> v
+            .putFloats(+0.5f, +1.0f, 0f)
+            .putFloats(1f, 1f)
         }
-        val c = builder.putVertex { it
-            .putFloats(+0.5f, -0.5f)
-            .putFloats(+1.0f,  0.0f)
+        val c = builder.putVertex { v -> v
+            .putFloats(-0.5f,  0.0f, 0f)
+            .putFloats(0f, 0f)
         }
-        builder.putElement(a, b, c)
-        this.mesh = builder.build()
+        val d = builder.putVertex { v -> v
+            .putFloats(+0.5f,  0.0f, 0f)
+            .putFloats(1f, 0f)
+        }
+        builder.putElement(c, b, a)
+        builder.putElement(b, c, d)
+        geometry = builder.build()  
     }
 
-    fun update() {}
+    fun update(deltaTime: Float) {
+        this.cameraRot += (PI * 2.0).toFloat() / 10f * deltaTime
+        // this.camera.pos.x = cos(this.cameraRot) * 3f
+        this.camera.pos.x = 0f
+        this.camera.pos.z = 2f
+    }
 
-    fun render(screen: Camera, dest: Framebuffer) {
-        dest.clearColor(Vector4f(abs(screen.dir.x()), abs(screen.dir.y()), abs(screen.dir.z()), 1f))
+    fun render(screen: Camera, dest: Framebuffer, deltaTime: Float) {
+        screen.parent = this.camera
+        TEST_SHADER.get().setMatrix4("uViewProj", screen.computeViewProj())
+        
+        dest.clearColor(Vector4f(0.2f, 0.2f, 0.2f, 1f))
         dest.clearDepth(1f)
-        this.mesh.render(this.shader, dest)
+        
+        // TEST_MODEL.get().render(
+        //     TEST_SHADER.get(), dest, 1,
+        //     "uLocalTransf", "uTexture"    
+        // )
+
+        TEST_SHADER.get()
+            .setMatrix4("uLocalTransf", Matrix4f())
+            .setTexture2("uTexture", TEST_TEXTURE.get())
+        this.geometry.render(TEST_SHADER.get(), dest)
     }
 
 }

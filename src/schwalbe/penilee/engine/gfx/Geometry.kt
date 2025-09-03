@@ -1,16 +1,14 @@
 
 package schwalbe.penilee.engine.gfx
 
-import schwalbe.penilee.engine.Resource
+import org.lwjgl.opengl.GL33.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.ShortBuffer
-import org.lwjgl.opengl.GL33.*
-import org.joml.*
 
-typealias VertexLayout = Array<Pair<Int, Mesh.Type>>
+typealias VertexLayout = List<Pair<Int, Geometry.Type>>
 
-class Mesh {
+class Geometry {
 
     enum class Type(
         val byteSize: Int, val glType: Int, val isIntType: Boolean
@@ -161,7 +159,7 @@ class Mesh {
             this.elements.add(c)
         }
 
-        fun build(): Mesh {
+        fun build(): Geometry {
             val vbo: ByteBuffer = ByteBuffer
                 .allocateDirect(this.vertices.size * this.stride)
                 .order(ByteOrder.nativeOrder())
@@ -176,22 +174,9 @@ class Mesh {
             val indexCount: Int = this.elements.size
             this.elements.clear()
             ebo.flip()
-            return Mesh(this.layout, this.stride, vbo, ebo, indexCount)
+            return Geometry(this.layout, this.stride, vbo, ebo, indexCount)
         }
 
-    }
-
-
-    class ObjLoader(
-        val path: String,
-        val bVert: (Builder.VertexBuilder, ObjVertex) -> Unit
-    ): Resource<Shader>() {
-        class ObjVertex(val pos: Vector3f, val uv: Vector2f, val norm: Vector3f)
-
-        override fun load(): Shader { 
-            // TODO!
-            throw RuntimeException("not yet implemented")
-        }
     }
 
 }

@@ -16,6 +16,8 @@ class Camera {
     var nearPlane: Float = 0.1f
     var farPlane: Float = 1000.0f
 
+    var parent: Camera? = null
+
     constructor(
         pos: Vector3f = Vector3f(0f, 0f, 0f), 
         dir: Vector3f = Vector3f(0f, 0f, -1f),
@@ -35,7 +37,22 @@ class Camera {
         this.fovUp = vHalf
     }
 
-    fun computeProjection(): Matrix4f {
+    fun computeRotation(): Matrix4f {
+        val pRot: Matrix4f = this.parent?.computeRotation() ?: Matrix4f()
+        val rot: Matrix4f = Matrix4f().lookAlong(this.dir, this.up)
+        return rot.mul(pRot)
+    }
+
+    fun computeTranslation(): Matrix4f {
+        val transl: Matrix4f = this.parent?.computeTranslation() ?: Matrix4f()
+        transl.translate(-this.pos.x(), -this.pos.y(), -this.pos.z())
+        return transl
+    }
+
+    fun computeView(): Matrix4f 
+        = this.computeRotation().mul(this.computeTranslation())
+
+    fun computeProj(): Matrix4f {
         val r = Matrix4f()
         r.perspectiveOffCenterFov(
             this.fovLeft, this.fovRight, this.fovDown, this.fovUp,
@@ -43,5 +60,8 @@ class Camera {
         )
         return r
     }
+
+    fun computeViewProj(): Matrix4f
+        = this.computeProj().mul(this.computeView())
 
 }
