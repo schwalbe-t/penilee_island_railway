@@ -4,6 +4,7 @@ package schwalbe.penilee.engine
 import schwalbe.penilee.engine.gfx.*
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
+import org.lwjgl.opengl.GL33.*
 import org.lwjgl.system.MemoryStack
 import org.lwjgl.system.MemoryUtil.NULL
 
@@ -34,6 +35,8 @@ class Window: Texture {
             ?: throw RuntimeException("Failed to create window")
         glfwMakeContextCurrent(this.id)
         GL.createCapabilities()
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
     }
 
     fun show() = glfwShowWindow(this.id)

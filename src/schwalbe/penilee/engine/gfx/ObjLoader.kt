@@ -84,11 +84,53 @@ private fun loadObjModel(
             "f" -> {
                 val builder = meshBuilders
                     .getOrPut(meshId) { Geometry.Builder(vertexLayout) }
-                // TODO! parse IDs and build vertex
+                val vertices = words.slice(1..<words.size).map { vertex ->
+                    val ids = vertex.split("/")
+                    val posI = ids[0].toInt()
+                    val uvI = if(ids.size >= 2) ids[1].toInt() else 0
+                    val normI = if(ids.size >= 3) ids[2].toInt() else 0
+                    val pos = if(posI == 0) Vector3f()
+                        else if(posI < 0) positions[positions.size + posI]
+                        else positions[posI - 1]
+                    val uv = if(uvI == 0) Vector2f()
+                        else if(uvI < 0) texCoords[texCoords.size + uvI]
+                        else texCoords[uvI - 1]
+                    val norm = if(normI == 0) Vector3f()
+                        else if(normI < 0) normals[normals.size + normI]
+                        else normals[normI - 1]
+                    builder.putVertex { v ->
+                        for(attrib in layout) { when(attrib) {
+                            ObjAttrib.POSITION -> v
+                                .putFloats(pos.x(), pos.y(), pos.z())
+                            ObjAttrib.TEX_COORDS -> v
+                                .putFloats(uv.x(), uv.y())
+                            ObjAttrib.NORMAL -> v
+                                .putFloats(norm.x(), norm.y(), norm.z())
+                        } }
+                    }
+                }
+                check(vertices.size >= 3)
+                if(vertices.size == 3) {
+                    builder.putElement(vertices[0], vertices[1], vertices[2])
+                } else if(vertices.size == 4) {
+                    builder.putElement(vertices[0], vertices[1], vertices[2])
+                    builder.putElement(vertices[0], vertices[2], vertices[3])
+                } else {
+                    for(i in 1..<vertices.size - 1) {
+                        builder.putElement(
+                            vertices[0], vertices[i], vertices[i + 1]
+                        )
+                    }
+                }
             }
         }
     }
-    // TODO! build geometries on GPU and build and insert mesh objects
+    for((id, builder) in meshBuilders) {
+        val geometry: Geometry = builder.build()
+        val texture: Texture2 = materials[id.second]!!
+        val localTransf = Matrix4f()
+        meshes.put(id, Model.Mesh(geometry, texture, localTransf))
+    }
 }
 
 private fun loadObjMaterials(
