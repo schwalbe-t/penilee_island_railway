@@ -6,7 +6,7 @@ import schwalbe.penilee.engine.gfx.*
 import org.joml.*
 import kotlin.math.*
 
-val DEFAULT_FOV: Double = (PI * 2.0 / 360.0) * 60.0
+val DEFAULT_FOV: Float = 60.degrees
 
 fun main() {
     val window = Window(1280, 720, "Penilee Island Railway")
@@ -38,24 +38,21 @@ class GameState {
     var modelRot: Float = 0f
 
     init {
-        this.camera.pos.x = 1f
-        this.camera.pos.y = 0.5f
-        this.camera.pos.z = 1f
-        this.camera.dir.x = -1f
-        this.camera.dir.y = -0.5f
-        this.camera.dir.z = -1f
+        this.camera.pos.set(1f, 0.5f, 1f)
+        this.camera.dir.set(-1f, -0.5f, -1f)
     }
 
     fun update(deltaTime: Float) {
         this.modelRot += (PI * 2.0).toFloat() / 10f * deltaTime
     }
 
-    fun render(screen: Camera, dest: Framebuffer, deltaTime: Float) {
-        screen.parent = this.camera
-        TEST_SHADER.get().setMatrix4("uViewProj", screen.computeViewProj())
+    fun render(screenCam: Camera, dest: Framebuffer, deltaTime: Float) {
+        screenCam.parent = this.camera
+
+        TEST_SHADER.get().setMatrix4("uViewProj", screenCam.computeViewProj())
         TEST_SHADER.get().setMatrix4("uModelTransf", Matrix4f()
             .scale(0.015f)
-            .rotateY(this.modelRot)
+            .rotateZ(this.modelRot)
         )
         
         dest.clearColor(Vector4f(0.2f, 0.2f, 0.2f, 1f))

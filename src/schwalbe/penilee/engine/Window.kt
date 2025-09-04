@@ -1,6 +1,7 @@
 
 package schwalbe.penilee.engine
 
+import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.gfx.*
 import org.lwjgl.glfw.GLFW.*
 import org.lwjgl.opengl.GL
@@ -54,16 +55,19 @@ class Window: Texture {
         render: (Camera, Framebuffer, Float) -> Unit
     ) {
         val dest = this.framebuffer()
-        val screen = Camera()
+        val camera = Camera()
         val deltaTimeState = DeltaTimeState()
         while(!this.shouldClose()) {
             this.pollEvents()
             val deltaTime: Float = deltaTimeState.computeDeltaTime()
             update(deltaTime)
-            screen.setHorizontalFov(
+            camera.pos.set(ORIGIN)
+            camera.dir.set(NDC_INTO_SCREEN)
+            camera.up.set(UP)
+            camera.setHorizontalFov(
                 horizontalFov, this.width.toFloat() / this.height.toFloat()
             )
-            render(screen, dest, deltaTime)
+            render(camera, dest, deltaTime)
             this.swapBuffers()
         }
         dest.destroy()

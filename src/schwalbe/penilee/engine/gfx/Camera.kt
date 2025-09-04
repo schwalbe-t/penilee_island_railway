@@ -3,6 +3,7 @@ package schwalbe.penilee.engine.gfx
 
 import org.joml.*
 import kotlin.math.*
+import schwalbe.penilee.engine.*
 
 class Camera {
 
@@ -37,20 +38,15 @@ class Camera {
         this.fovUp = vHalf
     }
 
-    fun computeRotation(): Matrix4f {
-        val pRot: Matrix4f = this.parent?.computeRotation() ?: Matrix4f()
-        val rot: Matrix4f = Matrix4f().lookAlong(this.dir, this.up)
-        return rot.mul(pRot)
+    fun computeView(child: Matrix4f = Matrix4f()): Matrix4f {
+        val center = Vector3f()
+        val nUp = Vector3f()
+        this.pos.add(this.dir, center)
+        this.up.normalize(nUp)
+        child.lookAt(this.pos, center, nUp)
+        this.parent?.computeView(child)
+        return child
     }
-
-    fun computeTranslation(): Matrix4f {
-        val transl: Matrix4f = this.parent?.computeTranslation() ?: Matrix4f()
-        transl.translate(-this.pos.x(), -this.pos.y(), -this.pos.z())
-        return transl
-    }
-
-    fun computeView(): Matrix4f 
-        = this.computeRotation().mul(this.computeTranslation())
 
     fun computeProj(): Matrix4f {
         val r = Matrix4f()

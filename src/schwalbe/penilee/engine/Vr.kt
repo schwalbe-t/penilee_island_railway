@@ -1,6 +1,7 @@
 
 package schwalbe.penilee.engine
 
+import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.gfx.*
 import kotlin.math.abs
 import org.lwjgl.openxr.*
@@ -259,7 +260,7 @@ class VrContext(
         for(eye in 0..<this.viewCount) {
             val cam = this.cameras[eye]
             val pose: XrPosef = views[eye].pose()
-            cam.pos = Vector3f(
+            cam.pos.set(
                 pose.`position$`().x(),
                 pose.`position$`().y(),
                 pose.`position$`().z()
@@ -270,14 +271,33 @@ class VrContext(
                 pose.orientation().z(),
                 pose.orientation().w()
             )
-            cam.dir = orientation.transform(Vector3f(0f, 0f, -1f))
-            cam.up = orientation.transform(Vector3f(0f, 1f, 0f))
+            orientation.transform(NDC_INTO_SCREEN, cam.dir)
+            orientation.transform(UP, cam.up)
             val fov: XrFovf = views[eye].fov()
             cam.fovLeft = fov.angleLeft()
             cam.fovRight = fov.angleRight()
             cam.fovDown = fov.angleDown()
             cam.fovUp = fov.angleUp()
         }
+    }
+
+    fun computeCameraAverage(dest: Camera): Float {
+        dest.pos.set(0f, 0f, 0f)
+        dest.dir.set(0f, 0f, 0f)
+        dest.up.set(0f, 0f, 0f)
+        var hFov: Float = 0f
+        for(cam in this.cameras) {
+            dest.pos.add(cam.pos)
+            dest.dir.add(cam.dir)
+            dest.up.add(cam.up)
+            hFov += abs(cam.fovLeft) + abs(cam.fovRight)
+        }
+        val camN: Float = this.cameras.size.toFloat()
+        dest.pos.div(camN)
+        dest.dir.div(camN)
+        dest.up.div(camN)
+        hFov /= camN
+        return hFov
     }
 
     fun withSwapchain(stack: MemoryStack, f: (Int) -> Unit) {
@@ -347,11 +367,12 @@ class VrContext(
         render: (Camera, Framebuffer, Float) -> Unit
     ) {
         val windowDest: Framebuffer = window.framebuffer()
-        val windowScreen = Camera()
+        val windowCamera = Camera()
         val deltaTimeState = DeltaTimeState()
         while(!window.shouldClose()) {
             window.pollEvents()
-            var deltaTime: Float = deltaTimeState.computeDeltaTime()
+            val deltaTime: Float = deltaTimeState.computeDeltaTime()
+            var hFov: Float = 0f
             MemoryStack.stackPush().use { stack ->
                 val predDispTime: Long = this.beginFrame(stack)
                 this.pollEvents(stack)
@@ -359,6 +380,7 @@ class VrContext(
                 this.locateViews(stack, predDispTime)
                 val views: XrView.Buffer = this.locateViews(stack, predDispTime)
                 this.updateCameras(views)
+                hFov = this.computeCameraAverage(windowCamera)
                 this.withSwapchain(stack) { imgIndex ->
                     for(eye in 0..<this.viewCount) {
                         val camera = this.cameras[eye]
@@ -368,22 +390,10 @@ class VrContext(
                 }
                 this.submitFrame(stack, predDispTime, views)
             }
-            val eyeN: Float = this.cameras.size.toFloat()
-            var hFov: Float = 0f
-            for(eye in this.cameras) {
-                hFov += abs(eye.fovLeft) + abs(eye.fovRight)
-                windowScreen.pos.add(eye.pos)
-                windowScreen.dir.add(eye.dir)
-                windowScreen.up.add(eye.up)
-            }
-            hFov /= eyeN
-            windowScreen.pos.div(eyeN)
-            windowScreen.dir.div(eyeN)
-            windowScreen.up.div(eyeN)
-            windowScreen.setHorizontalFov(
+            windowCamera.setHorizontalFov(
                 hFov, window.width.toFloat() / window.height.toFloat()
             )
-            render(windowScreen, windowDest, deltaTime)
+            render(windowCamera, windowDest, deltaTime)
             window.swapBuffers()
         }
     }
