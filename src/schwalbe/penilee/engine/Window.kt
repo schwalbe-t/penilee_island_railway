@@ -47,7 +47,7 @@ class Window: Texture {
     fun pollEvents() = glfwPollEvents()
     fun swapBuffers() = glfwSwapBuffers(this.id)
 
-    fun framebuffer(): Framebuffer = Framebuffer(0, this)
+    fun framebuffer(): Framebuffer = Framebuffer(0, this, this)
 
     fun runLoop(
         horizontalFov: Float,

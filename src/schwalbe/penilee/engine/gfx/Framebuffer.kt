@@ -6,81 +6,112 @@ import org.joml.*
 
 class Framebuffer {
 
-    val fboId: Int
-    private var rboId: Int = 0
-    private var rboWidth: Int = 0
-    private var rboHeight: Int = 0
-    var texture: Texture? = null
+    var fboId: Int = 0
         private set
     val owning: Boolean
+    var color: Texture? = null
+        private set
+    var depth: Texture? = null
+        private set
 
     constructor() {
         this.fboId = glGenFramebuffers()
         this.owning = true
+        this.bindRaw()
+        glDrawBuffer(GL_NONE)
+        glReadBuffer(GL_NONE)
     }
 
-    constructor(fboId: Int, texture: Texture?) {
+    constructor(fboId: Int, color: Texture?, depth: Texture?) {
         this.fboId = fboId
-        this.texture = texture
+        this.color = color
+        this.depth = depth
         this.owning = false
     }
 
-    fun attach(texture: Texture2): Framebuffer {
+    private fun checkValidAttachment(tex: Texture) {
         check(this.owning) { "Attempt to attach to immutable framebuffer" }
+        val existing: Texture? = this.color ?: this.depth
+        if(existing == null) { return }
+        check(tex.width == existing.width && tex.height == existing.height) {
+            "Attachment size does not match previously attached textures"
+        }
+    }
+
+    fun attachColor(texture: Texture2): Framebuffer {
+        this.checkValidAttachment(texture)
         this.bindRaw()
         glFramebufferTexture(
-            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
-            texture.id, 0
+            GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture.id, 0
         )
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
-        this.texture = texture
+        glReadBuffer(GL_COLOR_ATTACHMENT0)
+        this.color = texture
         return this
     }
 
-    fun attach(texture: Texture3, layer: Int): Framebuffer {
-        check(this.owning) { "Attempt to attach to immutable framebuffer" }
+    fun attachColor(texture: Texture3, layer: Int): Framebuffer {
+        this.checkValidAttachment(texture)
         this.bindRaw()
         glFramebufferTextureLayer(
             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
             texture.id, 0, layer
         )
         glDrawBuffer(GL_COLOR_ATTACHMENT0)
-        this.texture = texture
+        glReadBuffer(GL_COLOR_ATTACHMENT0)
+        this.color = texture
         return this
     }
 
-    private fun initRenderBuffer(width: Int, height: Int) {
-        if(!this.owning) { return }
-        if(width == this.rboWidth && height == this.rboHeight) { return }
-        if(this.rboId != 0) {
-            glDeleteRenderbuffers(this.rboId)
-        }
-        this.rboId = glGenRenderbuffers()
-        glBindRenderbuffer(GL_RENDERBUFFER, this.rboId)
-        glRenderbufferStorage(
-            GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 
-            width, height
-        )
-        glFramebufferRenderbuffer(
-            GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, 
-            GL_RENDERBUFFER, this.rboId
-        )
-        glBindRenderbuffer(GL_RENDERBUFFER, 0)
-        this.rboWidth = width
-        this.rboHeight = height
+    fun detachColor(): Framebuffer {
+        check(this.owning) { "Attempt to detach from immutable framebuffer" }
+        this.bindRaw()
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 0, 0)
+        glDrawBuffer(GL_NONE)
+        glReadBuffer(GL_NONE)
+        this.color = null
+        return this
     }
 
-    private inline fun bindRaw() = glBindFramebuffer(GL_FRAMEBUFFER, this.fboId)
+    fun attachDepth(texture: Texture2): Framebuffer {
+        this.checkValidAttachment(texture)
+        this.bindRaw()
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture.id, 0)
+        this.depth = texture
+        return this
+    }
+
+    fun attachDepth(texture: Texture3, layer: Int): Framebuffer {
+        this.checkValidAttachment(texture)
+        this.bindRaw()
+        glFramebufferTextureLayer(
+            GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 
+            texture.id, 0, layer
+        )
+        this.depth = texture
+        return this
+    }
+    
+    fun detachDepth(): Framebuffer {
+        check(this.owning) { "Attempt to detach from immutable framebuffer" }
+        this.bindRaw()
+        glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 0, 0)
+        this.depth = null
+        return this
+    }
+
+    private fun bindRaw() = glBindFramebuffer(GL_FRAMEBUFFER, this.fboId)
 
     fun bind() {
         this.bindRaw()
-        val tex = this.texture
-        check(tex != null) { "Attempt to bind incomplete framebuffer" }
-        this.initRenderBuffer(tex.width, tex.height)
-        glViewport(0, 0, tex.width, tex.height)
+        val target: Texture? = this.color ?: this.depth
+        if(target != null) {
+            glViewport(0, 0, target.width, target.height)
+        }
     }
 
     fun clearColor(color: Vector4f): Framebuffer {
+        if(this.color == null) { return this }
         this.bind()
         glClearColor(color.x(), color.y(), color.z(), color.w())
         glClear(GL_COLOR_BUFFER_BIT)
@@ -88,6 +119,7 @@ class Framebuffer {
     }
 
     fun clearDepth(value: Float): Framebuffer {
+        if(this.depth == null) { return this }
         this.bind()
         glClearDepth(value.toDouble())
         glClear(GL_DEPTH_BUFFER_BIT)
@@ -96,10 +128,8 @@ class Framebuffer {
 
     fun destroy() {
         if(!this.owning) { return }
-        glDeleteFramebuffers(this.fboId)
-        if(this.rboId != 0) {
-            glDeleteRenderbuffers(this.rboId)
-        }
+        if(this.fboId != 0) { glDeleteFramebuffers(this.fboId) }
+        this.fboId = 0
     }
 
 }

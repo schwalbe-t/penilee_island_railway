@@ -18,7 +18,8 @@ class ImageLoader(val path: String): Resource<Texture2>() {
             )
             check(imageBuffer != null) { "Failed to load image ${path}" }
             val texture = Texture2(
-                widthPtr.get(0), heightPtr.get(0), imageBuffer
+                widthPtr.get(0), heightPtr.get(0),
+                TextureFormat.RGBA8, imageBuffer
             )
             stbi_image_free(imageBuffer)
             return texture

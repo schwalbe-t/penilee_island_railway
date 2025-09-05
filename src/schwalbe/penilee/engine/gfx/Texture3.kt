@@ -24,7 +24,8 @@ class Texture3: Texture {
     }
 
     constructor(
-        width: Int, height: Int, layers: Int, data: ByteBuffer? = null
+        width: Int, height: Int, layers: Int, fmt: TextureFormat,
+        data: ByteBuffer? = null
     ) {
         this.id = glGenTextures()
         this.width = width
@@ -37,8 +38,8 @@ class Texture3: Texture {
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexImage3D(
-            GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, width, height, layers, 
-            0, GL_RGBA, GL_UNSIGNED_BYTE, data
+            GL_TEXTURE_2D_ARRAY, 0, fmt.iFmt, width, height, layers, 0, 
+            fmt.fmt, fmt.chType, data
         )
         glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
     }

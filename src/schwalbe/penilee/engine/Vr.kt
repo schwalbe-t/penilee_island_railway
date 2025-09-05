@@ -421,7 +421,12 @@ fun withVrContext(f: (VrContext) -> Unit): Boolean {
         )
         val imageFBOs: Array<Array<Framebuffer>> = Array(images.size) { imgI ->
             Array(viewCount) { eyeI ->
-                Framebuffer().attach(images[imgI], eyeI)
+                val viewTex: Texture3 = images[imgI]
+                val depthTex: Texture2 = Texture2(
+                    viewTex.width, viewTex.height, 
+                    TextureFormat.DEPTH24_STENCIL8
+                )
+                Framebuffer().attachColor(viewTex, eyeI).attachDepth(depthTex)
             }
         }
         println("Created OpenXR swapchain")
