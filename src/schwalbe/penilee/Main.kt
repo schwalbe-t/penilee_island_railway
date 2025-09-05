@@ -2,66 +2,27 @@
 package schwalbe.penilee
 
 import schwalbe.penilee.engine.*
-import schwalbe.penilee.engine.gfx.*
-import org.joml.*
-import kotlin.math.*
+import schwalbe.penilee.resources.loadAllResources
 
-val DEFAULT_FOV: Float = 60.degrees
+val DEFAULT_FOV: Float = 90.degrees
+var CURRENT_LEVEL: Level = Level()
 
 fun main() {
     val window = Window(1280, 720, "Penilee Island Railway")
-    loadResources(
-        TEST_SHADER,
-        TEST_MODEL
-    )
-    val state = GameState()
+    loadAllResources()
     window.show()
     val vrContext: Boolean = withVrContext { vr ->
-        vr.runLoop(window, state::update, state::render)
+        vr.runLoop(
+            window,
+            { dt -> CURRENT_LEVEL.update(dt) },
+            { cam, dest, dt -> CURRENT_LEVEL.render(cam, dest, dt) }
+        )
     }
     if(!vrContext) {
-        window.runLoop(DEFAULT_FOV.toFloat(), state::update, state::render)
-    }
-}
-
-val TEST_SHADER = GlslLoader(
-    "res/shaders/test_vert.glsl", "res/shaders/test_frag.glsl"
-)
-val TEST_MODEL = ObjLoader(
-    "res/maxwell.obj",
-    listOf(ObjAttrib.POSITION, ObjAttrib.TEX_COORDS)
-)
-
-class GameState {
-
-    val camera = Camera()
-    var modelRot: Float = 0f
-
-    init {
-        this.camera.pos.set(1f, 0.5f, 1f)
-        this.camera.dir.set(-1f, -0.5f, -1f)
-    }
-
-    fun update(deltaTime: Float) {
-        this.modelRot += (PI * 2.0).toFloat() / 10f * deltaTime
-    }
-
-    fun render(screenCam: Camera, dest: Framebuffer, deltaTime: Float) {
-        screenCam.parent = this.camera
-
-        TEST_SHADER.get().setMatrix4("uViewProj", screenCam.computeViewProj())
-        TEST_SHADER.get().setMatrix4("uModelTransf", Matrix4f()
-            .scale(0.015f)
-            .rotateZ(this.modelRot)
-        )
-        
-        dest.clearColor(Vector4f(0.2f, 0.2f, 0.2f, 1f))
-        dest.clearDepth(1f)
-        
-        TEST_MODEL.get().render(
-            TEST_SHADER.get(), dest, 1,
-            "uLocalTransf", "uTexture"
+        window.runLoop(
+            DEFAULT_FOV.toFloat(),
+            { dt -> CURRENT_LEVEL.update(dt) },
+            { cam, dest, dt -> CURRENT_LEVEL.render(cam, dest, dt) }
         )
     }
-
 }

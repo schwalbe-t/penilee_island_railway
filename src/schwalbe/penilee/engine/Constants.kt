@@ -16,3 +16,4 @@ val Double.degrees: Double
 val ORIGIN: Vector3f = Vector3f(0f, 0f, 0f)
 val UP: Vector3f = Vector3f(0f, 1f, 0f)
 val NDC_INTO_SCREEN: Vector3f = Vector3f(0f, 0f, -1f)
+val TAU: Float = PI.toFloat() * 2f
