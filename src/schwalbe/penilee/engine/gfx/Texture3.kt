@@ -10,7 +10,7 @@ class Texture3: Texture {
         private set
     override val width: Int
     override val height: Int
-    var layers: Int
+    val layers: Int
     val owning: Boolean
 
     constructor(
@@ -44,7 +44,7 @@ class Texture3: Texture {
         glBindTexture(GL_TEXTURE_2D_ARRAY, 0)
     }
 
-    fun destroy() {
+    override fun destroy() {
         if(!this.owning) { return }
         if(this.id != 0) { glDeleteTextures(this.id) }
         this.id = 0

@@ -3,19 +3,31 @@ package schwalbe.penilee.resources
 
 import schwalbe.penilee.engine.gfx.*
 import schwalbe.penilee.engine.loadResources
+import schwalbe.penilee.Renderer
 
-val TEST_SHADER = GlslLoader(
-    "res/shaders/test_vert.glsl", "res/shaders/test_frag.glsl"
+val RENDERER_SHADOW_SHADER = GlslLoader(
+    "res/shaders/geometry.vert.glsl",
+    "res/shaders/shadows.frag.glsl"
+)
+val RENDERER_GEOMETRY_SHADER = GlslLoader(
+    "res/shaders/geometry.vert.glsl",
+    "res/shaders/geometry.frag.glsl"
+)
+val RENDERER_POST_SHADER = GlslLoader(
+    "res/shaders/post.vert.glsl",
+    "res/shaders/post.frag.glsl"
 )
 
 val SIGNAL_BOX = ObjLoader(
     "res/models/signal_box.obj",
-    listOf(ObjAttrib.POSITION, ObjAttrib.TEX_COORDS),
-    FaceCulling.BACK
+    Renderer.OBJ_LAYOUT,
+    FaceCulling.DISABLED
 )
 
 fun loadAllResources() = loadResources(
-    TEST_SHADER,
+    RENDERER_SHADOW_SHADER,
+    RENDERER_GEOMETRY_SHADER,
+    RENDERER_POST_SHADER,
 
     SIGNAL_BOX
 )

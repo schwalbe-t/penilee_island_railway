@@ -29,9 +29,8 @@ class Framebuffer {
         this.owning = false
     }
 
-    private fun checkValidAttachment(tex: Texture) {
+    private fun checkValidAttachment(tex: Texture, existing: Texture?) {
         check(this.owning) { "Attempt to attach to immutable framebuffer" }
-        val existing: Texture? = this.color ?: this.depth
         if(existing == null) { return }
         check(tex.width == existing.width && tex.height == existing.height) {
             "Attachment size does not match previously attached textures"
@@ -39,7 +38,7 @@ class Framebuffer {
     }
 
     fun attachColor(texture: Texture2): Framebuffer {
-        this.checkValidAttachment(texture)
+        this.checkValidAttachment(texture, this.depth)
         this.bindRaw()
         glFramebufferTexture(
             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, texture.id, 0
@@ -51,7 +50,7 @@ class Framebuffer {
     }
 
     fun attachColor(texture: Texture3, layer: Int): Framebuffer {
-        this.checkValidAttachment(texture)
+        this.checkValidAttachment(texture, this.depth)
         this.bindRaw()
         glFramebufferTextureLayer(
             GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
@@ -74,7 +73,7 @@ class Framebuffer {
     }
 
     fun attachDepth(texture: Texture2): Framebuffer {
-        this.checkValidAttachment(texture)
+        this.checkValidAttachment(texture, this.color)
         this.bindRaw()
         glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, texture.id, 0)
         this.depth = texture
@@ -82,7 +81,7 @@ class Framebuffer {
     }
 
     fun attachDepth(texture: Texture3, layer: Int): Framebuffer {
-        this.checkValidAttachment(texture)
+        this.checkValidAttachment(texture, this.color)
         this.bindRaw()
         glFramebufferTextureLayer(
             GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, 

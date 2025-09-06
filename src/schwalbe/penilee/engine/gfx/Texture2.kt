@@ -38,7 +38,7 @@ class Texture2: Texture {
         glBindTexture(GL_TEXTURE_2D, 0)
     }
 
-    fun destroy() {
+    override fun destroy() {
         if(!this.owning) { return }
         if(this.id != 0) { glDeleteTextures(this.id) }
         this.id = 0

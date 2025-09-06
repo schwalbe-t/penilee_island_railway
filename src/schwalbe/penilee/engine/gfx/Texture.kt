@@ -33,4 +33,6 @@ enum class TextureFormat(val fmt: Int, val iFmt: Int, val chType: Int) {
 interface Texture {
     val width: Int
     val height: Int
+
+    fun destroy()
 }

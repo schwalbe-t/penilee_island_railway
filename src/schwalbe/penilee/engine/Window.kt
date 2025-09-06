@@ -73,4 +73,6 @@ class Window: Texture {
         dest.destroy()
     }
 
+    override fun destroy() {}
+
 }

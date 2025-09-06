@@ -8,26 +8,53 @@ import org.joml.*
 
 class Level {
 
-    val player = Player(Vector3f(-2f, 1.5f, 1.5f))
+    val player = Player(Vector3f(-2.5f, 1.5f, 1.5f))
+
+    init {
+        player.camera.dir.set(1f, 0f, -0.5f)
+    }
 
     fun update(deltaTime: Float) {
 
     }
 
-    fun render(screenCam: Camera, dest: Framebuffer, deltaTime: Float) {
-        screenCam.parent = player.camera
+    val signalBoxes = listOf(
+        Matrix4f(),
+        Matrix4f()
+            .translate(0f, 0f, -10f)
+            .rotateY(180.degrees),
+        Matrix4f()
+            .translate(20f, 0f, -20f)
+            .rotateY(90.degrees)
+    )
 
-        val shader: Shader = TEST_SHADER.get()
-        shader.setMatrix4("uViewProj", screenCam.computeViewProj())
-        shader.setMatrix4("uModelTransf", Matrix4f())
-
-        dest.clearColor(Vector4f(109f, 128f, 250f, 255f).div(255f))
-        dest.clearDepth(1f)
-
-        SIGNAL_BOX.get().render(
-            TEST_SHADER.get(), dest, 1,
-            "uLocalTransf", "uTexture"
-        )
+    fun renderShadows(renderer: Renderer, deltaTime: Float) {
+        renderer.renderShadows(SIGNAL_BOX.get(), this.signalBoxes)
     }
 
+    fun render(renderer: Renderer, screenCam: Camera, deltaTime: Float) {
+        screenCam.parent = player.camera
+        renderer.applyCamera(screenCam)
+
+        renderer.render(SIGNAL_BOX.get(), this.signalBoxes)
+    }
+
+}
+
+fun createTestLevel(renderer: Renderer): Level {
+    val sunDirection = Vector3f(-1f, -1f, 1f)
+    renderer.configureLighting(
+        lights = listOf(Light.sunFromAlong(
+            from = Vector3f(50f, 50f, -50f),
+            direction = sunDirection,
+            radius = 25f,
+            distance = 200f
+        )),
+        shadowMapRes = 4096,
+        depthBias = 0.00025f,
+        normalOffset = 0.055f,
+        outOfBoundsLit = true,
+        sunDirection = sunDirection
+    )
+    return Level()
 }

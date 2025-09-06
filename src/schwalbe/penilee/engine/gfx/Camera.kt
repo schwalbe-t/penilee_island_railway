@@ -14,8 +14,8 @@ class Camera {
     var fovRight: Float = 0f
     var fovDown: Float = 0f
     var fovUp: Float = 0f
-    var nearPlane: Float = 0.1f
-    var farPlane: Float = 1000.0f
+    var nearPlane: Float = 0.25f
+    var farPlane: Float = 500.0f
 
     var parent: Camera? = null
 
