@@ -2,20 +2,24 @@
 package schwalbe.penilee
 
 import schwalbe.penilee.engine.*
+import schwalbe.penilee.engine.input.*
 import schwalbe.penilee.engine.gfx.*
 import schwalbe.penilee.resources.*
 import org.joml.*
 
 class Level {
 
-    val player = Player(Vector3f(-2.5f, 1.5f, 1.5f))
+    val player = Player(
+        Vector3f(),
+        listOf(
+            AABB(Vector3f(-2.75f, 0f, -1.75f), Vector3f(2.75f, 0f, 1.75f))
+        )
+    )
+    val camera = Camera()
 
-    init {
-        player.camera.dir.set(1f, 0f, -0.5f)
-    }
-
-    fun update(deltaTime: Float) {
-
+    fun update(deltaTime: Float, inVr: Boolean) {
+        this.player.update(deltaTime, inVr)
+        this.player.configureCamera(this.camera)
     }
 
     val signalBoxes = listOf(
@@ -33,7 +37,7 @@ class Level {
     }
 
     fun render(renderer: Renderer, screenCam: Camera, deltaTime: Float) {
-        screenCam.parent = player.camera
+        screenCam.parent = this.camera
         renderer.applyCamera(screenCam)
 
         renderer.render(SIGNAL_BOX.get(), this.signalBoxes)
