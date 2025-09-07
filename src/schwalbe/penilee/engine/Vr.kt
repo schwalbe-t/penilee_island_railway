@@ -4,6 +4,7 @@ package schwalbe.penilee.engine
 import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.gfx.*
 import kotlin.math.abs
+import kotlin.system.exitProcess
 import org.lwjgl.openxr.*
 import org.lwjgl.openxr.XR10.*
 import org.lwjgl.openxr.KHROpenGLEnable.*
@@ -230,9 +231,13 @@ class VrContext(
                     val changed = XrEventDataSessionStateChanged
                         .create(event.address())
                     val newState = changed.state()
-                    val sessionEnded = newState == XR_SESSION_STATE_EXITING 
+                    val sessionEnded = newState == XR_SESSION_STATE_EXITING
+                        || newState == XR_SESSION_STATE_STOPPING
                         || newState == XR_SESSION_STATE_LOSS_PENDING
-                    check(!sessionEnded) { "Session ended" }
+                    if(sessionEnded) {
+                        this.destroy()
+                        exitProcess(0)
+                    }
                 }
             }
             event.type(XR_TYPE_EVENT_DATA_BUFFER)
@@ -361,6 +366,30 @@ class VrContext(
         check(submitRes == XR_SUCCESS) { "Failed to submit frame" }
     }
 
+    fun requestSessionEnd() {
+        check(xrRequestExitSession(this.session) == XR_SUCCESS) {
+            "Failed to request OpenXR session end"
+        }
+    }
+
+    fun destroy() {
+        check(xrEndSession(this.session) == XR_SUCCESS) {
+            "Failed to end OpenXR session" 
+        }
+        check(xrDestroySwapchain(this.swapchain) == XR_SUCCESS) {
+            "Failed to destroy OpenXR swapchain"
+        }
+        check(xrDestroySpace(this.space) == XR_SUCCESS) {
+            "Failed to destroy OpenXR space"
+        }
+        check(xrDestroySession(this.session) == XR_SUCCESS) {
+            "Failed to destroy OpenXR session"
+        }
+        check(xrDestroyInstance(this.instance) == XR_SUCCESS) {
+            "Failed to destroy OpenXR instance"
+        }
+    }
+
     fun runLoop(
         window: Window,
         update: (Float) -> Unit, 
@@ -369,7 +398,8 @@ class VrContext(
         val windowDest: Framebuffer = window.framebuffer()
         val windowCamera = Camera()
         val deltaTimeState = DeltaTimeState()
-        while(!window.shouldClose()) {
+        while(true) {
+            if(window.shouldClose()) { this.requestSessionEnd() }
             window.pollEvents()
             val deltaTime: Float = deltaTimeState.computeDeltaTime()
             var hFov: Float = 0f
@@ -433,10 +463,12 @@ fun withVrContext(f: (VrContext) -> Unit): Boolean {
         val space: XrSpace = initXrSpace(stack, session)
         val cameras: Array<Camera> = Array(viewCount) { Camera() }
         println("Created reference space")
-        f(VrContext(
+        val vr = VrContext(
             instance, sysId, session, viewCount, 
             swapchain, images, imageFBOs, space, cameras
-        ))
+        )
+        f(vr)
+        vr.destroy()
     }
     return true
 }
