@@ -127,7 +127,7 @@ class Window: Texture {
 
     fun runLoop(
         horizontalFov: Float,
-        update: (Float) -> Unit, 
+        update: (Float, Camera) -> Unit, 
         render: (Camera, Framebuffer, Float) -> Unit
     ) {
         val dest = this.framebuffer()
@@ -136,7 +136,7 @@ class Window: Texture {
         while(!this.shouldClose()) {
             this.pollEvents()
             val deltaTime: Float = deltaTimeState.computeDeltaTime()
-            update(deltaTime)
+            update(deltaTime, camera)
             camera.pos.set(ORIGIN)
             camera.dir.set(NDC_INTO_SCREEN)
             camera.up.set(UP)

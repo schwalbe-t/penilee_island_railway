@@ -14,8 +14,8 @@ fun main() {
     val renderer = Renderer()
     CURRENT_LEVEL = createTestLevel(renderer)
     window.show()
-    val update: (Boolean) -> (Float) -> Unit = { inVr -> { dt ->
-        CURRENT_LEVEL?.update(dt, inVr)
+    val update: (Boolean) -> (Float, Camera) -> Unit = { inVr -> { dt, winCam ->
+        CURRENT_LEVEL?.update(dt, inVr, winCam)
         renderer.clearShadows()
         CURRENT_LEVEL?.renderShadows(renderer, dt)
     } }

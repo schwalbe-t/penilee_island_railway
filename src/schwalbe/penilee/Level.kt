@@ -17,8 +17,8 @@ class Level {
     )
     val camera = Camera()
 
-    fun update(deltaTime: Float, inVr: Boolean) {
-        this.player.update(deltaTime, inVr)
+    fun update(deltaTime: Float, inVr: Boolean, windowCam: Camera) {
+        this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
     }
 
@@ -41,6 +41,21 @@ class Level {
         renderer.applyCamera(screenCam)
 
         renderer.render(SIGNAL_BOX.get(), this.signalBoxes)
+
+        renderer.render(SIGNAL_BOX.get(), listOf(
+            Matrix4f()
+                .translate(this.camera.pos)
+                .translate(Vector3f(VrController.RIGHT.gripPos)
+                    .rotateY(this.player.angleY)
+                )
+                .scale(0.01f)
+                .rotateY(this.player.angleY)
+                .rotateTowards(
+                    VrController.RIGHT.gripDir, VrController.RIGHT.gripUp
+                )
+                .rotateZ(180.degrees)
+                .rotateX(90.degrees)
+        ))
     }
 
 }

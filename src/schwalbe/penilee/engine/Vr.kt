@@ -2,6 +2,7 @@
 package schwalbe.penilee.engine
 
 import schwalbe.penilee.engine.*
+import schwalbe.penilee.engine.input.VrController
 import schwalbe.penilee.engine.gfx.*
 import kotlin.math.abs
 import kotlin.system.exitProcess
@@ -192,6 +193,370 @@ fun initXrSpace(stack: MemoryStack, session: XrSession): XrSpace {
     return XrSpace(spacePtr.get(0), session)
 }
 
+fun createXrActionSet(stack: MemoryStack, instance: XrInstance): XrActionSet {
+    val actionSetInfo = XrActionSetCreateInfo.calloc(stack)
+        .type(XR_TYPE_ACTION_SET_CREATE_INFO)
+        .actionSetName(stack.UTF8("gameplay"))
+        .localizedActionSetName(stack.UTF8("Gameplay"))
+        .priority(0)
+    val actionSetPtr = stack.mallocPointer(1)
+    val actionSetRes = xrCreateActionSet(instance, actionSetInfo, actionSetPtr)
+    check(actionSetRes == XR_SUCCESS) { "Failed to create action set" }
+    return XrActionSet(actionSetPtr.get(0), instance)
+}
+
+class VrActionContext(
+    val stack: MemoryStack, val instance: XrInstance,
+    val session: XrSession, val space: XrSpace, val actionSet: XrActionSet
+)
+
+class VrActionProps(
+    val name: String, val localName: String, val subactionPaths: List<String>
+)
+
+fun createXrAction(
+    context: VrActionContext, type: Int, props: VrActionProps
+): XrAction {
+    val pathPtrs = context.stack.mallocLong(props.subactionPaths.size)
+    val pathPtr = context.stack.mallocLong(1)
+    for(subactionPath in props.subactionPaths) {
+        val pathRes = xrStringToPath(context.instance, subactionPath, pathPtr)
+        check(pathRes == XR_SUCCESS) { "Failed to create action path" }
+        pathPtrs.put(pathPtr.get(0))
+    }
+    pathPtrs.flip()
+    val actionInfo = XrActionCreateInfo.calloc(context.stack)
+        .type(XR_TYPE_ACTION_CREATE_INFO)
+        .actionType(type)
+        .actionName(context.stack.UTF8(props.name))
+        .localizedActionName(context.stack.UTF8(props.localName))
+        .countSubactionPaths(props.subactionPaths.size)
+        .subactionPaths(pathPtrs)
+    val actionPtr = context.stack.mallocPointer(1)
+    val actionRes = xrCreateAction(context.actionSet, actionInfo, actionPtr)
+    check(actionRes == XR_SUCCESS) { "Failed to create OpenXR action" }
+    return XrAction(actionPtr.get(0), context.actionSet)
+}
+
+fun createXrActionSpace(
+    context: VrActionContext, props: VrActionProps, action: XrAction
+): XrSpace {
+    val startingPose = XrPosef.calloc(context.stack)
+        .orientation(XrQuaternionf.calloc(context.stack).set(0f, 0f, 0f, 1f))
+        .`position$`(XrVector3f.calloc(context.stack).set(0f, 0f, 0f))
+    val pathPtr = context.stack.mallocLong(1)
+    val pathRes = xrStringToPath(
+        context.instance, props.subactionPaths[0], pathPtr
+    )
+    check(pathRes == XR_SUCCESS) { "Failed to create action path" }
+    val spaceInfo = XrActionSpaceCreateInfo.calloc(context.stack)
+        .type(XR_TYPE_ACTION_SPACE_CREATE_INFO)
+        .action(action)
+        .poseInActionSpace(startingPose)
+        .subactionPath(pathPtr.get(0))
+    val spacePtr = context.stack.mallocPointer(1)
+    val spaceRes = xrCreateActionSpace(context.session, spaceInfo, spacePtr)
+    check(spaceRes == XR_SUCCESS) { "Failed to create OpenXR action space" }
+    return XrSpace(spacePtr.get(0), context.session)
+}
+
+interface VrAction {
+    val action: XrAction
+    fun poll(predDispTime: Long)
+}
+
+class VrButtonAction(
+    val ctx: VrActionContext, props: VrActionProps, 
+    val button: VrController.Button
+): VrAction {
+    override val action: XrAction
+        = createXrAction(ctx, XR_ACTION_TYPE_BOOLEAN_INPUT, props)
+    override fun poll(predDispTime: Long) = MemoryStack.stackPush().use { s ->
+        val state = XrActionStateBoolean.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_BOOLEAN)
+        val getInfo = XrActionStateGetInfo.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_GET_INFO)
+            .action(this.action)
+        val getRes = xrGetActionStateBoolean(this.ctx.session, getInfo, state)
+        if(getRes != XR_SUCCESS) { return }
+        if(state.currentState()) { this.button.press() } 
+        else { this.button.release() }
+    }
+}
+
+class VrTriggerAction(
+    val ctx: VrActionContext, props: VrActionProps,
+    val withValue: (Float) -> Unit
+): VrAction {
+    override val action: XrAction
+        = createXrAction(ctx, XR_ACTION_TYPE_FLOAT_INPUT, props)
+    override fun poll(predDispTime: Long) = MemoryStack.stackPush().use { s ->
+        val state = XrActionStateFloat.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_FLOAT)
+        val getInfo = XrActionStateGetInfo.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_GET_INFO)
+            .action(this.action)
+        val getRes = xrGetActionStateFloat(this.ctx.session, getInfo, state)
+        if(getRes != XR_SUCCESS) { return }
+        withValue(state.currentState())
+    }
+}
+
+class VrStickAction(
+    val ctx: VrActionContext, props: VrActionProps,
+    val withValue: (Vector2f) -> Unit
+): VrAction {
+    override val action: XrAction
+        = createXrAction(ctx, XR_ACTION_TYPE_VECTOR2F_INPUT, props)
+    override fun poll(predDispTime: Long) = MemoryStack.stackPush().use { s ->
+        val state = XrActionStateVector2f.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_VECTOR2F)
+        val getInfo = XrActionStateGetInfo.calloc(s)
+            .type(XR_TYPE_ACTION_STATE_GET_INFO)
+            .action(this.action)
+        val getRes = xrGetActionStateVector2f(this.ctx.session, getInfo, state)
+        if(getRes != XR_SUCCESS) { return }
+        withValue(Vector2f(state.currentState().x(), state.currentState().y()))
+    }
+}
+
+class VrPoseAction(
+    val ctx: VrActionContext, props: VrActionProps,
+    val withValue: (Vector3f, Vector3f, Vector3f) -> Unit
+): VrAction {
+    override val action: XrAction
+        = createXrAction(ctx, XR_ACTION_TYPE_POSE_INPUT, props)
+    val space = createXrActionSpace(ctx, props, this.action)
+    override fun poll(predDispTime: Long) = MemoryStack.stackPush().use { s ->
+        val l = XrSpaceLocation.calloc(s)
+            .type(XR_TYPE_SPACE_LOCATION)
+        val locateRes = xrLocateSpace(this.space, ctx.space, predDispTime, l)
+        val wasSuccess: Boolean = locateRes == XR_SUCCESS 
+            && (l.locationFlags() and XR_SPACE_LOCATION_POSITION_VALID_BIT.toLong()) != 0L
+            && (l.locationFlags() and XR_SPACE_LOCATION_ORIENTATION_VALID_BIT.toLong()) != 0L
+        if(!wasSuccess) { return }
+        val rPos = l.pose().`position$`()
+        val rQRot = l.pose().orientation()
+        val qRot = Quaternionf(rQRot.x(), rQRot.y(), rQRot.z(), rQRot.w())
+        withValue(
+            Vector3f(rPos.x(), rPos.y(), rPos.z()),
+            qRot.transform(Vector3f(NDC_INTO_SCREEN)),
+            qRot.transform(Vector3f(UP))
+        )
+    }
+}
+
+fun suggestXrActionBindings(
+    stack: MemoryStack, instance: XrInstance, profile: String, 
+    sBindings: List<Pair<String, VrAction>>
+) {
+    val bindings = XrActionSuggestedBinding.calloc(sBindings.size, stack)
+    val bindingPathPtr = stack.mallocLong(1)
+    sBindings.forEachIndexed { i, (bp, a) ->
+        val bindingPathRes = xrStringToPath(instance, bp, bindingPathPtr)
+        check(bindingPathRes == XR_SUCCESS) { "Failed to create binding path" }
+        val binding = bindings.get(i)
+        binding.action(a.action)
+        binding.binding(bindingPathPtr.get(0))
+    }
+    val profilePathPtr = stack.mallocLong(1)
+    val profilePathRes = xrStringToPath(instance, profile, profilePathPtr)
+    check(profilePathRes == XR_SUCCESS) { "Failed to create profile path" }
+    val suggestedBinding = XrInteractionProfileSuggestedBinding.calloc(stack)
+        .type(XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING)
+        .interactionProfile(profilePathPtr.get(0))
+        .suggestedBindings(bindings)
+    val suggestRes = xrSuggestInteractionProfileBindings(
+        instance, suggestedBinding
+    )
+    check(suggestRes == XR_SUCCESS) { "Failed to suggest input bindings" }
+}
+
+fun populateXrActionSet(
+    stack: MemoryStack, instance: XrInstance, session: XrSession, 
+    space: XrSpace, actionSet: XrActionSet
+): List<VrAction> {
+    val ctx = VrActionContext(stack, instance, session, space, actionSet)
+    val buttonsSaP: List<String> = listOf("/user/hand/left", "/user/hand/right")
+    val aButton = VrButtonAction(ctx, VrActionProps(
+        "a_button_action", "A Button", buttonsSaP
+    ), VrController.Button.A)
+    val bButton = VrButtonAction(ctx, VrActionProps(
+        "b_button_action", "B Button", buttonsSaP
+    ), VrController.Button.B)
+    val xButton = VrButtonAction(ctx, VrActionProps(
+        "x_button_action", "X Button", buttonsSaP
+    ), VrController.Button.X)
+    val yButton = VrButtonAction(ctx, VrActionProps(
+        "y_button_action", "Y Button", buttonsSaP
+    ), VrController.Button.Y)
+    val menuButton = VrButtonAction(ctx, VrActionProps(
+        "menu_button_action", "Menu Button", buttonsSaP
+    ), VrController.Button.MENU)
+    val leftTrigger = VrTriggerAction(ctx, VrActionProps(
+        "left_trigger_action", "Left Trigger", listOf("/user/hand/left")
+    )) { value -> VrController.LEFT.trigger = value }
+    val rightTrigger = VrTriggerAction(ctx, VrActionProps(
+        "right_trigger_action", "Right Trigger", listOf("/user/hand/right")
+    )) { value -> VrController.RIGHT.trigger = value }
+    val leftSqueeze = VrTriggerAction(ctx, VrActionProps(
+        "left_squeeze_action", "Left Squeeze", listOf("/user/hand/left")
+    )) { value -> VrController.LEFT.squeeze = value }
+    val rightSqueeze = VrTriggerAction(ctx, VrActionProps(
+        "right_squeeze_action", "Right Squeeze", listOf("/user/hand/right")
+    )) { value -> VrController.RIGHT.squeeze = value }
+    val leftStick = VrStickAction(ctx, VrActionProps(
+        "left_stick_action", "Left Stick", listOf("/user/hand/left")
+    )) { value -> VrController.LEFT.stick = value }
+    val rightStick = VrStickAction(ctx, VrActionProps(
+        "right_stick_action", "Right Stick", listOf("/user/hand/right")
+    )) { value -> VrController.RIGHT.stick = value }
+    val leftStickButton = VrButtonAction(ctx, VrActionProps(
+        "left_stick_click_action", "Left Stick Click", listOf("/user/hand/left")
+    ), VrController.Button.STICK_L)
+    val rightStickButton = VrButtonAction(ctx, VrActionProps(
+        "right_stick_click_action", "Right Stick Click", 
+        listOf("/user/hand/right")
+    ), VrController.Button.STICK_R)
+    val leftGrip = VrPoseAction(ctx, VrActionProps(
+        "left_grip_pose_action", "Left Grip Pose", listOf("/user/hand/left")
+    )) { pos, dir, up ->
+        VrController.LEFT.gripPos = pos
+        VrController.LEFT.gripDir = dir
+        VrController.LEFT.gripUp = up
+    }
+    val rightGrip = VrPoseAction(ctx, VrActionProps(
+        "right_grip_pose_action", "Right Grip Pose", listOf("/user/hand/right")
+    )) { pos, dir, up ->
+        VrController.RIGHT.gripPos = pos
+        VrController.RIGHT.gripDir = dir
+        VrController.RIGHT.gripUp = up
+    }
+    val leftAim = VrPoseAction(ctx, VrActionProps(
+        "left_aim_pose_action", "Left Aim Pose", listOf("/user/hand/left")
+    )) { pos, dir, up ->
+        VrController.LEFT.aimPos = pos
+        VrController.LEFT.aimDir = dir
+        VrController.LEFT.aimUp = up
+    }
+    val rightAim = VrPoseAction(ctx, VrActionProps(
+        "right_aim_pose_action", "Right Aim Pose", listOf("/user/hand/right")
+    )) { pos, dir, up ->
+        VrController.RIGHT.aimPos = pos
+        VrController.RIGHT.aimDir = dir
+        VrController.RIGHT.aimUp = up
+    }
+    suggestXrActionBindings(
+        stack, instance, "/interaction_profiles/oculus/touch_controller", 
+        listOf(
+            "/user/hand/right/input/a/click" to aButton,
+            "/user/hand/right/input/b/click" to bButton,
+            "/user/hand/left/input/x/click" to xButton,
+            "/user/hand/left/input/y/click" to yButton,
+            "/user/hand/left/input/menu/click" to menuButton,
+            "/user/hand/left/input/trigger/value" to leftTrigger,
+            "/user/hand/right/input/trigger/value" to rightTrigger,
+            "/user/hand/left/input/squeeze/value" to leftSqueeze,
+            "/user/hand/right/input/squeeze/value" to rightSqueeze,
+            "/user/hand/left/input/thumbstick" to leftStick,
+            "/user/hand/right/input/thumbstick" to rightStick,
+            "/user/hand/left/input/thumbstick/click" to leftStickButton,
+            "/user/hand/right/input/thumbstick/click" to rightStickButton,
+            "/user/hand/left/input/grip/pose" to leftGrip,
+            "/user/hand/right/input/grip/pose" to rightGrip,
+            "/user/hand/left/input/aim/pose" to leftAim,
+            "/user/hand/right/input/aim/pose" to rightAim
+        )
+    )
+    suggestXrActionBindings(
+        stack, instance, "/interaction_profiles/valve/index_controller", 
+        listOf(
+            "/user/hand/right/input/a/click" to aButton,
+            "/user/hand/right/input/b/click" to bButton,
+            "/user/hand/left/input/a/click" to xButton,
+            "/user/hand/left/input/b/click" to yButton,
+            "/user/hand/left/input/system/click" to menuButton,
+            "/user/hand/left/input/trigger/value" to leftTrigger,
+            "/user/hand/right/input/trigger/value" to rightTrigger,
+            "/user/hand/left/input/squeeze/value" to leftSqueeze,
+            "/user/hand/right/input/squeeze/value" to rightSqueeze,
+            "/user/hand/left/input/thumbstick" to leftStick,
+            "/user/hand/right/input/thumbstick" to rightStick,
+            "/user/hand/left/input/thumbstick/click" to leftStickButton,
+            "/user/hand/right/input/thumbstick/click" to rightStickButton,
+            "/user/hand/left/input/grip/pose" to leftGrip,
+            "/user/hand/right/input/grip/pose" to rightGrip,
+            "/user/hand/left/input/aim/pose" to leftAim,
+            "/user/hand/right/input/aim/pose" to rightAim
+        )
+    )
+    suggestXrActionBindings(
+        stack, instance, "/interaction_profiles/microsoft/motion_controller", 
+        listOf(
+            "/user/hand/left/input/menu/click" to menuButton,
+            "/user/hand/left/input/trigger/value" to leftTrigger,
+            "/user/hand/right/input/trigger/value" to rightTrigger,
+            "/user/hand/left/input/squeeze/click" to leftSqueeze,
+            "/user/hand/right/input/squeeze/click" to rightSqueeze,
+            "/user/hand/left/input/thumbstick" to leftStick,
+            "/user/hand/right/input/thumbstick" to rightStick,
+            "/user/hand/left/input/thumbstick/click" to leftStickButton,
+            "/user/hand/right/input/thumbstick/click" to rightStickButton,
+            "/user/hand/left/input/grip/pose" to leftGrip,
+            "/user/hand/right/input/grip/pose" to rightGrip,
+            "/user/hand/left/input/aim/pose" to leftAim,
+            "/user/hand/right/input/aim/pose" to rightAim
+        )
+    )
+    suggestXrActionBindings(
+        stack, instance, "/interaction_profiles/khr/simple_controller", 
+        listOf(
+            "/user/hand/left/input/menu/click" to menuButton,
+            "/user/hand/left/input/select/click" to leftTrigger,
+            "/user/hand/right/input/select/click" to rightTrigger,
+            "/user/hand/left/input/aim/pose" to leftAim,
+            "/user/hand/right/input/aim/pose" to rightAim
+        )
+    )
+    suggestXrActionBindings(
+        stack, instance, "/interaction_profiles/htc/vive_controller", 
+        listOf(
+            "/user/hand/left/input/menu/click" to menuButton,
+            "/user/hand/left/input/trigger/value" to leftTrigger,
+            "/user/hand/right/input/trigger/value" to rightTrigger,
+            "/user/hand/left/input/squeeze/click" to leftSqueeze,
+            "/user/hand/right/input/squeeze/click" to rightSqueeze,
+            "/user/hand/left/input/trackpad" to leftStick,
+            "/user/hand/right/input/trackpad" to rightStick,
+            "/user/hand/left/input/trackpad/click" to leftStickButton,
+            "/user/hand/right/input/trackpad/click" to rightStickButton,
+            "/user/hand/left/input/grip/pose" to leftGrip,
+            "/user/hand/right/input/grip/pose" to rightGrip,
+            "/user/hand/left/input/aim/pose" to leftAim,
+            "/user/hand/right/input/aim/pose" to rightAim
+        )
+    )
+    return listOf(
+        aButton, bButton, xButton, yButton, menuButton,
+        leftTrigger, rightTrigger, leftSqueeze, rightSqueeze,
+        leftStick, rightStick, leftStickButton, rightStickButton,
+        leftGrip, rightGrip, leftAim, rightAim
+    )
+}
+
+fun attachXrActionSet(
+    session: XrSession, actionSet: XrActionSet
+) = MemoryStack.stackPush().use { stack ->
+    val actionSetPtr = stack.mallocPointer(1)
+    actionSetPtr.put(actionSet.address())
+    actionSetPtr.flip()
+    val attachInfo = XrSessionActionSetsAttachInfo.calloc(stack)
+        .type(XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO)
+        .actionSets(actionSetPtr)
+    val attachRes = xrAttachSessionActionSets(session, attachInfo)
+    check(attachRes == XR_SUCCESS) { "Failed to attach action set to session: ${attachRes}" }
+}
+
 class VrContext(
     val instance: XrInstance,
     val sysId: Long,
@@ -201,8 +566,12 @@ class VrContext(
     val images: Array<Texture3>,
     val imageFBOs: Array<Array<Framebuffer>>,
     val space: XrSpace,
-    val cameras: Array<Camera>
+    val cameras: Array<Camera>,
+    val actionSet: XrActionSet,
+    val actions: List<VrAction>
 ) {
+    var actionSetAttached: Boolean = false
+    var isFocused: Boolean = false
     
     fun beginFrame(stack: MemoryStack): Long {        
         // wait for the next frame
@@ -231,6 +600,11 @@ class VrContext(
                     val changed = XrEventDataSessionStateChanged
                         .create(event.address())
                     val newState = changed.state()
+                    this.isFocused = newState == XR_SESSION_STATE_FOCUSED
+                    if(this.isFocused && !this.actionSetAttached) {
+                        attachXrActionSet(session, actionSet)
+                        this.actionSetAttached = true
+                    }
                     val sessionEnded = newState == XR_SESSION_STATE_EXITING
                         || newState == XR_SESSION_STATE_STOPPING
                         || newState == XR_SESSION_STATE_LOSS_PENDING
@@ -242,6 +616,22 @@ class VrContext(
             }
             event.type(XR_TYPE_EVENT_DATA_BUFFER)
         }
+    }
+
+    fun pollActions(stack: MemoryStack, predDispTime: Long) {
+        if(!this.isFocused) { return }
+        val activeActionSets = XrActiveActionSet.calloc(1, stack)
+        activeActionSets.forEach { it
+            .actionSet(this.actionSet)
+            .subactionPath(0L)
+        }
+        val syncInfo = XrActionsSyncInfo.calloc(stack)
+            .type(XR_TYPE_ACTIONS_SYNC_INFO)
+            .countActiveActionSets(1)
+            .activeActionSets(activeActionSets)
+        val syncRes = xrSyncActions(this.session, syncInfo)
+        check(syncRes == XR_SUCCESS) { "Failed to sync OpenXR actions: ${syncRes}" }
+        this.actions.forEach { it.poll(predDispTime) }
     }
 
     fun locateViews(stack: MemoryStack, predDispTime: Long): XrView.Buffer {
@@ -392,7 +782,7 @@ class VrContext(
 
     fun runLoop(
         window: Window,
-        update: (Float) -> Unit, 
+        update: (Float, Camera) -> Unit, 
         render: (Camera, Framebuffer, Float) -> Unit
     ) {
         val windowDest: Framebuffer = window.framebuffer()
@@ -406,11 +796,15 @@ class VrContext(
             MemoryStack.stackPush().use { stack ->
                 val predDispTime: Long = this.beginFrame(stack)
                 this.pollEvents(stack)
-                update(deltaTime)
                 this.locateViews(stack, predDispTime)
+                this.pollActions(stack, predDispTime)
                 val views: XrView.Buffer = this.locateViews(stack, predDispTime)
                 this.updateCameras(views)
                 hFov = this.computeCameraAverage(windowCamera)
+                windowCamera.setHorizontalFov(
+                    hFov, window.width.toFloat() / window.height.toFloat()
+                )
+                update(deltaTime, windowCamera)
                 this.withSwapchain(stack) { imgIndex ->
                     for(eye in 0..<this.viewCount) {
                         val camera = this.cameras[eye]
@@ -420,9 +814,6 @@ class VrContext(
                 }
                 this.submitFrame(stack, predDispTime, views)
             }
-            windowCamera.setHorizontalFov(
-                hFov, window.width.toFloat() / window.height.toFloat()
-            )
             render(windowCamera, windowDest, deltaTime)
             window.swapBuffers()
         }
@@ -463,9 +854,15 @@ fun withVrContext(f: (VrContext) -> Unit): Boolean {
         val space: XrSpace = initXrSpace(stack, session)
         val cameras: Array<Camera> = Array(viewCount) { Camera() }
         println("Created reference space")
+        val actionSet: XrActionSet = createXrActionSet(stack, instance)
+        val actions: List<VrAction> = populateXrActionSet(
+            stack, instance, session, space, actionSet
+        )
+        println("Created actions")
         val vr = VrContext(
             instance, sysId, session, viewCount, 
-            swapchain, images, imageFBOs, space, cameras
+            swapchain, images, imageFBOs, space, cameras,
+            actionSet, actions
         )
         f(vr)
         vr.destroy()
