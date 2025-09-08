@@ -17,9 +17,86 @@ class Level {
     )
     val camera = Camera()
 
+    val levers: List<Lever> = listOf(
+        Lever(
+            Vector3f(-2.00f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-1.75f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_2,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-1.50f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-1.25f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-1.00f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-0.75f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_2,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-0.50f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(-0.25f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f( 0.00f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_2,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+0.25f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+0.50f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+0.75f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+1.00f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_2,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+1.25f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+1.50f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_3,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+1.75f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_1,
+            { false }, { state -> }
+        ),
+        Lever(
+            Vector3f(+2.00f, 0f, -1.20f), Lever.Color.BROWN, Lever.Sign.NUM_2,
+            { false }, { state -> }
+        )
+    )
+
+    val interactions = Interaction.Manager(levers.map { it.interaction })
+
     fun update(deltaTime: Float, inVr: Boolean, windowCam: Camera) {
         this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
+
+        interactions.update(this.player, windowCam, inVr)
+
+        this.levers.forEach { it.update(deltaTime, this.player, windowCam) }
 
         if(VrController.Button.STICK_L.isPressed) {
             VrController.LEFT.vibrate(1.0f, 100_000_000)
@@ -29,38 +106,17 @@ class Level {
         }
     }
 
-    val signalBoxes = listOf(
-        Matrix4f(),
-        Matrix4f()
-            .translate(0f, 0f, -10f)
-            .rotateY(180.degrees),
-        Matrix4f()
-            .translate(20f, 0f, -20f)
-            .rotateY(90.degrees)
-    )
-
-    val leverBases = listOf(
-        Matrix4f().translate(+1.00f, 0f, -1.5f),
-        Matrix4f().translate(+0.75f, 0f, -1.5f),
-        Matrix4f().translate(+0.50f, 0f, -1.5f),
-        Matrix4f().translate(+0.25f, 0f, -1.5f),
-        Matrix4f().translate( 0.00f, 0f, -1.5f),
-        Matrix4f().translate(-0.25f, 0f, -1.5f),
-        Matrix4f().translate(-0.50f, 0f, -1.5f),
-        Matrix4f().translate(-0.75f, 0f, -1.5f),
-        Matrix4f().translate(-1.00f, 0f, -1.5f)
-    )
-
     fun renderShadows(renderer: Renderer, deltaTime: Float) {
-        renderer.renderShadows(SIGNAL_BOX.get(), this.signalBoxes)
+        renderer.renderShadows(SIGNAL_BOX.get(), listOf(Matrix4f()))
+        this.levers.forEach { it.renderShadows(renderer) }
     }
 
     fun render(renderer: Renderer, screenCam: Camera, deltaTime: Float) {
         screenCam.parent = this.camera
         renderer.applyCamera(screenCam)
 
-        renderer.render(SIGNAL_BOX.get(), this.signalBoxes)
-        renderer.render(LEVER_BASE.get(), this.leverBases)
+        renderer.render(SIGNAL_BOX.get(), listOf(Matrix4f()))
+        this.levers.forEach { it.render(renderer) }
 
         renderer.render(SIGNAL_BOX.get(), listOf(
             Matrix4f()

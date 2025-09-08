@@ -5,7 +5,7 @@ A VR game about signalling on an old island railway.
 
 - Red - Signal
 - Blue - Point
-- Orange - Level Crossing
+- Brown - Level Crossing
 
 ### Signalling Concept
 

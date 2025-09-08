@@ -18,18 +18,18 @@ val RENDERER_POST_SHADER = GlslLoader(
     "res/shaders/post.frag.glsl"
 )
 
-val SIGNAL_BOX = ObjLoader(
-    "res/models/signal_box.obj",
-    Renderer.OBJ_LAYOUT,
-    FaceCulling.DISABLED
-)
-val LEVER_BASE = ObjLoader(
-    "res/models/lever_base.obj",
-    Renderer.OBJ_LAYOUT,
-    FaceCulling.DISABLED
-    // theoretically this model allows for face culling, but the floor
-    // was visible through the edges of the model
-)
+
+val SIGNAL_BOX = ObjLoader("res/models/signal_box.obj", Renderer.OBJ_LAYOUT)
+
+val LEVER_BASE = ObjLoader("res/models/lever_base.obj", Renderer.OBJ_LAYOUT)
+val LEVER_BODY = ObjLoader("res/models/lever_body.obj", Renderer.OBJ_LAYOUT)
+val LEVER_BODY_RED = ImageLoader("res/models/lever_body_red.png")
+val LEVER_BODY_BLUE = ImageLoader("res/models/lever_body_blue.png")
+val LEVER_BODY_BROWN = ImageLoader("res/models/lever_body_brown.png")
+val LEVER_SIGN_NUM_1 = ImageLoader("res/models/lever_sign_1.png")
+val LEVER_SIGN_NUM_2 = ImageLoader("res/models/lever_sign_2.png")
+val LEVER_SIGN_NUM_3 = ImageLoader("res/models/lever_sign_3.png")
+val LEVER_CLUTCH = ObjLoader("res/models/lever_clutch.obj", Renderer.OBJ_LAYOUT)
 
 fun loadAllResources() = loadResources(
     RENDERER_SHADOW_SHADER,
@@ -37,5 +37,7 @@ fun loadAllResources() = loadResources(
     RENDERER_POST_SHADER,
 
     SIGNAL_BOX,
-    LEVER_BASE
+    LEVER_BASE, LEVER_BODY, LEVER_CLUTCH,
+    LEVER_BODY_RED, LEVER_BODY_BLUE, LEVER_BODY_BROWN,
+    LEVER_SIGN_NUM_1, LEVER_SIGN_NUM_2, LEVER_SIGN_NUM_3
 )

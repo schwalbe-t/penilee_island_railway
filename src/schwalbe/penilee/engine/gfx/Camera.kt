@@ -38,6 +38,12 @@ class Camera {
         this.fovUp = vHalf
     }
 
+    fun computePos(child: Vector3f = Vector3f()): Vector3f {
+        val p: Vector3f = child.add(this.pos)
+        this.parent?.computePos(p)
+        return p
+    }
+
     fun computeView(child: Matrix4f = Matrix4f()): Matrix4f {
         val center = Vector3f()
         val nUp = Vector3f()
@@ -59,5 +65,13 @@ class Camera {
 
     fun computeViewProj(): Matrix4f
         = this.computeProj().mul(this.computeView())
+
+    fun worldToView(worldPos: Vector3fc): Vector3f
+        = this.computeView()
+            .transformPosition(Vector3f(worldPos))
+
+    fun viewToNdc(viewPos: Vector3fc): Vector3f
+        = this.computeProj()
+            .transformProject(Vector3f(viewPos))
 
 }

@@ -101,15 +101,15 @@ class Shader {
     
     fun setFloat(n: String, v: Float): Shader
         = this.findUniform(n) { l -> glUniform1f(l, v) }
-    fun setVec2(n: String, v: Vector2f): Shader
+    fun setVec2(n: String, v: Vector2fc): Shader
         = this.findUniform(n) { l -> glUniform2f(l, v.x(), v.y()) }
-    fun setVec3(n: String, v: Vector3f): Shader
+    fun setVec3(n: String, v: Vector3fc): Shader
         = this.findUniform(n) { l -> glUniform3f(l, v.x(), v.y(), v.z()) }
-    fun setVec4(n: String, v: Vector4f): Shader 
+    fun setVec4(n: String, v: Vector4fc): Shader 
         = this.findUniform(n) { l -> 
         glUniform4f(l, v.x(), v.y(), v.z(), v.w()) 
     }
-    fun setMatrix2(n: String, v: Matrix2f): Shader 
+    fun setMatrix2(n: String, v: Matrix2fc): Shader 
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(2 * 2)
@@ -117,7 +117,7 @@ class Shader {
             glUniformMatrix2fv(l, false, buff)
         }
     }
-    fun setMatrix3(n: String, v: Matrix3f): Shader 
+    fun setMatrix3(n: String, v: Matrix3fc): Shader 
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(3 * 3)
@@ -125,7 +125,7 @@ class Shader {
             glUniformMatrix3fv(l, false, buff)
         }
     }
-    fun setMatrix4(n: String, v: Matrix4f): Shader 
+    fun setMatrix4(n: String, v: Matrix4fc): Shader 
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(4 * 4)
@@ -141,7 +141,7 @@ class Shader {
             glUniform1fv(l, buff)
         }
     }
-    fun setVec2Arr(n: String, v: List<Vector2f>): Shader
+    fun setVec2Arr(n: String, v: List<Vector2fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(2 * v.size)
@@ -149,7 +149,7 @@ class Shader {
             glUniform2fv(l, buff)
         }
     }
-    fun setVec3Arr(n: String, v: List<Vector3f>): Shader
+    fun setVec3Arr(n: String, v: List<Vector3fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(3 * v.size)
@@ -157,7 +157,7 @@ class Shader {
             glUniform3fv(l, buff)
         }
     }
-    fun setVec4Arr(n: String, v: List<Vector4f>): Shader
+    fun setVec4Arr(n: String, v: List<Vector4fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(4 * v.size)
@@ -165,7 +165,7 @@ class Shader {
             glUniform4fv(l, buff)
         }
     }
-    fun setMatrix2Arr(n: String, v: List<Matrix2f>): Shader
+    fun setMatrix2Arr(n: String, v: List<Matrix2fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(2 * 2 * v.size)
@@ -173,7 +173,7 @@ class Shader {
             glUniformMatrix2fv(l, false, buff)
         }
     }
-    fun setMatrix3Arr(n: String, v: List<Matrix3f>): Shader
+    fun setMatrix3Arr(n: String, v: List<Matrix3fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(3 * 3 * v.size)
@@ -181,7 +181,7 @@ class Shader {
             glUniformMatrix3fv(l, false, buff)
         }
     }
-    fun setMatrix4Arr(n: String, v: List<Matrix4f>): Shader
+    fun setMatrix4Arr(n: String, v: List<Matrix4fc>): Shader
         = this.findUniform(n) { l ->
         MemoryStack.stackPush().use { stack ->
             val buff = stack.mallocFloat(4 * 4 * v.size)

@@ -344,7 +344,7 @@ class VrPoseAction(
         val qRot = Quaternionf(rQRot.x(), rQRot.y(), rQRot.z(), rQRot.w())
         withValue(
             Vector3f(rPos.x(), rPos.y(), rPos.z()),
-            qRot.transform(Vector3f(NDC_INTO_SCREEN)),
+            qRot.transform(Vector3f(INTO_SCREEN)),
             qRot.transform(Vector3f(UP))
         )
     }
@@ -712,7 +712,7 @@ class VrContext(
                 pose.orientation().z(),
                 pose.orientation().w()
             )
-            orientation.transform(NDC_INTO_SCREEN, cam.dir)
+            orientation.transform(INTO_SCREEN, cam.dir)
             orientation.transform(UP, cam.up)
             val fov: XrFovf = views[eye].fov()
             cam.fovLeft = fov.angleLeft()

@@ -19,14 +19,16 @@ class Model(
         instanceCount: Int = 1,
         localTransfUniform: String? = null,
         textureUniform: String? = null,
-        depthTesting: DepthTesting = DepthTesting.ENABLED
+        depthTesting: DepthTesting = DepthTesting.ENABLED,
+        texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
     ) {
-        for(mesh in this.meshes.values) {
+        for((meshId, mesh) in this.meshes) {
             if(localTransfUniform != null) {
                 shader.setMatrix4(localTransfUniform, mesh.localTransf)
             }
             if(textureUniform != null) {
-                shader.setTexture2(textureUniform, mesh.texture)
+                val texture: Texture2 = texOverrides.get(meshId) ?: mesh.texture
+                shader.setTexture2(textureUniform, texture)
             }
             mesh.geometry.render(
                 shader, dest, instanceCount, this.faceCulling, depthTesting

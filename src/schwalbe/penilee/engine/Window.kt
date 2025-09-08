@@ -138,7 +138,7 @@ class Window: Texture {
             val deltaTime: Float = deltaTimeState.computeDeltaTime()
             update(deltaTime, camera)
             camera.pos.set(ORIGIN)
-            camera.dir.set(NDC_INTO_SCREEN)
+            camera.dir.set(INTO_SCREEN)
             camera.up.set(UP)
             camera.setHorizontalFov(
                 horizontalFov, this.width.toFloat() / this.height.toFloat()

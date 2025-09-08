@@ -16,6 +16,9 @@ class Player(var position: Vector3f, val bounds: List<AABB>) {
     var angleX: Float = 0f
     var angleY: Float = 0f
 
+    fun computeHeadPos(): Vector3f
+        = Vector3f(this.position).add(PLAYER_CAM_OFFSET)
+
     fun getGamepadDeltaPos(forward: Vector3fc, right: Vector3fc): Vector3f {
         return Vector3f()
             .add(Vector3f(right).mul(VrController.LEFT.stick.x()))
@@ -67,7 +70,7 @@ class Player(var position: Vector3f, val bounds: List<AABB>) {
 
     fun configureCamera(camera: Camera) {
         camera.pos = Vector3f(this.position).add(PLAYER_CAM_OFFSET)
-        camera.dir = Vector3f(NDC_INTO_SCREEN)
+        camera.dir = Vector3f(INTO_SCREEN)
             .rotateX(this.angleX)
             .rotateY(this.angleY)
         camera.up = Vector3f(0f, 1f, 0f)

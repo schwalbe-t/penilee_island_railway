@@ -38,8 +38,8 @@ class Renderer {
     private var outputDepth: Texture2? = null
     private var shadowMaps = Texture3(10, 10, 1, Renderer.SHADOW_MAP_DEPTH_FMT)
     private var shadowMapDest = Framebuffer()
-    private var lightViewProj: List<Matrix4f> = listOf()
-    var background = Vector3f(0.05f, 0.05f, 0.05f)
+    private var lightViewProj: List<Matrix4fc> = listOf()
+    var background = Vector3f(141f, 183f, 255f).div(255f)
 
     init {
         val blitGB = Geometry.Builder(listOf(
@@ -56,7 +56,7 @@ class Renderer {
     }
 
     fun configureLighting(
-        lights: List<Matrix4f>, 
+        lights: List<Matrix4fc>, 
         shadowMapRes: Int,
         depthBias: Float, normalOffset: Float, 
         outOfBoundsLit: Boolean, sunDirection: Vector3f
@@ -94,14 +94,15 @@ class Renderer {
     }
 
     fun renderShadows(
-        model: Model, modelTransfs: List<Matrix4f>
+        model: Model, modelTransfs: List<Matrix4fc>,
+        texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
     ) {
         val shader: Shader = RENDERER_SHADOW_SHADER.get()
         var rendered: Int = 0
         while(rendered < modelTransfs.size) {
             val remaining: Int = modelTransfs.size - rendered
             val callSize: Int = min(remaining, Renderer.INSTANCES_PER_CALL)
-            val callModelTransfs: List<Matrix4f> = modelTransfs
+            val callModelTransfs: List<Matrix4fc> = modelTransfs
                 .slice(rendered..<rendered + callSize)
             shader.setMatrix4Arr("uModelTransfs", callModelTransfs)
             for(light in 0..<this.shadowMaps.layers) {
@@ -109,7 +110,8 @@ class Renderer {
                 shader.setMatrix4("uViewProj", this.lightViewProj[light])
                 model.render(
                     shader, this.shadowMapDest, callSize,
-                    "uLocalTransf", "uTexture", DepthTesting.ENABLED
+                    "uLocalTransf", "uTexture", 
+                    DepthTesting.ENABLED, texOverrides
                 )
             }
             rendered += callSize
@@ -151,20 +153,22 @@ class Renderer {
     }
 
     fun render(
-        model: Model, modelTransfs: List<Matrix4f>,
-        depthTesting: DepthTesting = DepthTesting.ENABLED
+        model: Model, modelTransfs: List<Matrix4fc>,
+        depthTesting: DepthTesting = DepthTesting.ENABLED,
+        texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
     ) {
         val shader: Shader = RENDERER_GEOMETRY_SHADER.get()
         var rendered: Int = 0
         while(rendered < modelTransfs.size) {
             val remaining: Int = modelTransfs.size - rendered
             val callSize: Int = min(remaining, Renderer.INSTANCES_PER_CALL)
-            val callModelTransfs: List<Matrix4f> = modelTransfs
+            val callModelTransfs: List<Matrix4fc> = modelTransfs
                 .slice(rendered..<rendered + callSize)
             shader.setMatrix4Arr("uModelTransfs", callModelTransfs)
             model.render(
                 shader, this.output, callSize,
-                "uLocalTransf", "uTexture", depthTesting
+                "uLocalTransf", "uTexture", 
+                depthTesting, texOverrides
             )
             rendered += callSize
         }
