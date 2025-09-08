@@ -20,6 +20,13 @@ class Level {
     fun update(deltaTime: Float, inVr: Boolean, windowCam: Camera) {
         this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
+
+        if(VrController.Button.STICK_L.isPressed) {
+            VrController.LEFT.vibrate(1.0f, 100_000_000)
+        }
+        if(VrController.Button.STICK_R.isPressed) {
+            VrController.RIGHT.vibrate(1.0f, 100_000_000)
+        }
     }
 
     val signalBoxes = listOf(

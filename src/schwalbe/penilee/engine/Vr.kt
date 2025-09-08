@@ -214,15 +214,21 @@ class VrActionProps(
     val name: String, val localName: String, val subactionPaths: List<String>
 )
 
+fun createXrPath(
+    instance: XrInstance, path: String
+): Long = MemoryStack.stackPush().use { s ->
+    val pathPtr = s.mallocLong(1)
+    val pathRes = xrStringToPath(instance, path, pathPtr)
+    check(pathRes == XR_SUCCESS) { "Failed to create OpenXR path" }
+    return pathPtr.get(0)
+}
+
 fun createXrAction(
     context: VrActionContext, type: Int, props: VrActionProps
 ): XrAction {
     val pathPtrs = context.stack.mallocLong(props.subactionPaths.size)
-    val pathPtr = context.stack.mallocLong(1)
-    for(subactionPath in props.subactionPaths) {
-        val pathRes = xrStringToPath(context.instance, subactionPath, pathPtr)
-        check(pathRes == XR_SUCCESS) { "Failed to create action path" }
-        pathPtrs.put(pathPtr.get(0))
+    props.subactionPaths.forEach { 
+        pathPtrs.put(createXrPath(context.instance, it)) 
     }
     pathPtrs.flip()
     val actionInfo = XrActionCreateInfo.calloc(context.stack)
@@ -244,16 +250,11 @@ fun createXrActionSpace(
     val startingPose = XrPosef.calloc(context.stack)
         .orientation(XrQuaternionf.calloc(context.stack).set(0f, 0f, 0f, 1f))
         .`position$`(XrVector3f.calloc(context.stack).set(0f, 0f, 0f))
-    val pathPtr = context.stack.mallocLong(1)
-    val pathRes = xrStringToPath(
-        context.instance, props.subactionPaths[0], pathPtr
-    )
-    check(pathRes == XR_SUCCESS) { "Failed to create action path" }
     val spaceInfo = XrActionSpaceCreateInfo.calloc(context.stack)
         .type(XR_TYPE_ACTION_SPACE_CREATE_INFO)
         .action(action)
         .poseInActionSpace(startingPose)
-        .subactionPath(pathPtr.get(0))
+        .subactionPath(createXrPath(context.instance, props.subactionPaths[0]))
     val spacePtr = context.stack.mallocPointer(1)
     val spaceRes = xrCreateActionSpace(context.session, spaceInfo, spacePtr)
     check(spaceRes == XR_SUCCESS) { "Failed to create OpenXR action space" }
@@ -346,25 +347,47 @@ class VrPoseAction(
     }
 }
 
+class VrVibrateAction(
+    val ctx: VrActionContext, props: VrActionProps
+): VrAction {
+    override val action: XrAction
+        = createXrAction(ctx, XR_ACTION_TYPE_VIBRATION_OUTPUT, props)
+    val vibration = XrHapticVibration.calloc(ctx.stack)
+        .type(XR_TYPE_HAPTIC_VIBRATION)
+        .frequency(XR_FREQUENCY_UNSPECIFIED)
+    val actionInfo = XrHapticActionInfo.calloc(ctx.stack)
+        .type(XR_TYPE_HAPTIC_ACTION_INFO)
+        .action(this.action)
+        .subactionPath(createXrPath(ctx.instance, props.subactionPaths[0]))
+    override fun poll(predDispTime: Long) {}
+    fun vibrate(amplitude: Float, durationNanos: Long) 
+            = MemoryStack.stackPush().use { s ->        
+        this.vibration
+            .amplitude(amplitude)
+            .duration(durationNanos)
+        xrApplyHapticFeedback(
+            this.ctx.session, this.actionInfo,
+            XrHapticBaseHeader.create(this.vibration)
+        )
+    }
+    fun stopVibration() = MemoryStack.stackPush().use { s ->
+        xrStopHapticFeedback(this.ctx.session, this.actionInfo)
+    }
+}
+
 fun suggestXrActionBindings(
     stack: MemoryStack, instance: XrInstance, profile: String, 
     sBindings: List<Pair<String, VrAction>>
 ) {
     val bindings = XrActionSuggestedBinding.calloc(sBindings.size, stack)
-    val bindingPathPtr = stack.mallocLong(1)
     sBindings.forEachIndexed { i, (bp, a) ->
-        val bindingPathRes = xrStringToPath(instance, bp, bindingPathPtr)
-        check(bindingPathRes == XR_SUCCESS) { "Failed to create binding path" }
         val binding = bindings.get(i)
         binding.action(a.action)
-        binding.binding(bindingPathPtr.get(0))
+        binding.binding(createXrPath(instance, bp))
     }
-    val profilePathPtr = stack.mallocLong(1)
-    val profilePathRes = xrStringToPath(instance, profile, profilePathPtr)
-    check(profilePathRes == XR_SUCCESS) { "Failed to create profile path" }
     val suggestedBinding = XrInteractionProfileSuggestedBinding.calloc(stack)
         .type(XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING)
-        .interactionProfile(profilePathPtr.get(0))
+        .interactionProfile(createXrPath(instance, profile))
         .suggestedBindings(bindings)
     val suggestRes = xrSuggestInteractionProfileBindings(
         instance, suggestedBinding
@@ -446,6 +469,16 @@ fun populateXrActionSet(
         VrController.RIGHT.aimDir = dir
         VrController.RIGHT.aimUp = up
     }
+    val leftVibrate = VrVibrateAction(ctx, VrActionProps(
+        "left_vibrate_action", "Left Vibration", listOf("/user/hand/left")
+    ))
+    VrController.LEFT.vibrateImpl = leftVibrate::vibrate
+    VrController.LEFT.stopVibrationImpl = leftVibrate::stopVibration
+    val rightVibrate = VrVibrateAction(ctx, VrActionProps(
+        "right_vibrate_action", "Right Vibration", listOf("/user/hand/right")
+    ))
+    VrController.RIGHT.vibrateImpl = rightVibrate::vibrate
+    VrController.RIGHT.stopVibrationImpl = rightVibrate::stopVibration
     suggestXrActionBindings(
         stack, instance, "/interaction_profiles/oculus/touch_controller", 
         listOf(
@@ -465,7 +498,9 @@ fun populateXrActionSet(
             "/user/hand/left/input/grip/pose" to leftGrip,
             "/user/hand/right/input/grip/pose" to rightGrip,
             "/user/hand/left/input/aim/pose" to leftAim,
-            "/user/hand/right/input/aim/pose" to rightAim
+            "/user/hand/right/input/aim/pose" to rightAim,
+            "/user/hand/left/output/haptic" to leftVibrate,
+            "/user/hand/right/output/haptic" to rightVibrate
         )
     )
     suggestXrActionBindings(
@@ -487,7 +522,9 @@ fun populateXrActionSet(
             "/user/hand/left/input/grip/pose" to leftGrip,
             "/user/hand/right/input/grip/pose" to rightGrip,
             "/user/hand/left/input/aim/pose" to leftAim,
-            "/user/hand/right/input/aim/pose" to rightAim
+            "/user/hand/right/input/aim/pose" to rightAim,
+            "/user/hand/left/output/haptic" to leftVibrate,
+            "/user/hand/right/output/haptic" to rightVibrate
         )
     )
     suggestXrActionBindings(
@@ -505,7 +542,9 @@ fun populateXrActionSet(
             "/user/hand/left/input/grip/pose" to leftGrip,
             "/user/hand/right/input/grip/pose" to rightGrip,
             "/user/hand/left/input/aim/pose" to leftAim,
-            "/user/hand/right/input/aim/pose" to rightAim
+            "/user/hand/right/input/aim/pose" to rightAim,
+            "/user/hand/left/output/haptic" to leftVibrate,
+            "/user/hand/right/output/haptic" to rightVibrate
         )
     )
     suggestXrActionBindings(
@@ -515,7 +554,9 @@ fun populateXrActionSet(
             "/user/hand/left/input/select/click" to leftTrigger,
             "/user/hand/right/input/select/click" to rightTrigger,
             "/user/hand/left/input/aim/pose" to leftAim,
-            "/user/hand/right/input/aim/pose" to rightAim
+            "/user/hand/right/input/aim/pose" to rightAim,
+            "/user/hand/right/output/haptic" to leftVibrate,
+            "/user/hand/right/output/haptic" to rightVibrate
         )
     )
     suggestXrActionBindings(
@@ -533,7 +574,9 @@ fun populateXrActionSet(
             "/user/hand/left/input/grip/pose" to leftGrip,
             "/user/hand/right/input/grip/pose" to rightGrip,
             "/user/hand/left/input/aim/pose" to leftAim,
-            "/user/hand/right/input/aim/pose" to rightAim
+            "/user/hand/right/input/aim/pose" to rightAim,
+            "/user/hand/left/output/haptic" to leftVibrate,
+            "/user/hand/right/output/haptic" to rightVibrate
         )
     )
     return listOf(

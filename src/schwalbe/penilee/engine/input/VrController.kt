@@ -43,4 +43,12 @@ class VrController {
     var aimDir: Vector3fc = Vector3f()
     var aimUp: Vector3fc = Vector3f()
 
+    var vibrateImpl: (Float, Long) -> Unit = { amplitude, duration -> }
+    var stopVibrationImpl: () -> Unit = {}
+
+    fun vibrate(amplitude: Float, durationNanos: Long)
+        = this.vibrateImpl(amplitude, durationNanos)
+    
+    fun stopVibration() = this.stopVibrationImpl()
+
 }
