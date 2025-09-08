@@ -34,11 +34,11 @@ class Player(var position: Vector3f, val bounds: List<AABB>) {
     fun updatePosition(deltaTime: Float, windowCam: Camera) {
         val camView: Matrix4f = windowCam.computeView()
         val rightDir = Vector3f(
-            camView.get(0, 0), camView.get(1, 0), camView.get(2, 0)
-        )
+            camView.get(0, 0), 0f, camView.get(2, 0)
+        ).normalize()
         val forwardDir = Vector3f(
-            camView.get(0, 2), camView.get(1, 2), camView.get(2, 2)
-        ).negate()
+            camView.get(0, 2), 0f, camView.get(2, 2)
+        ).negate().normalize()
         val dpos: Vector3f = this.getKeyboardDeltaPos(forwardDir, rightDir)
             .add(this.getGamepadDeltaPos(forwardDir, rightDir))
         if(dpos.length() > 0f) {

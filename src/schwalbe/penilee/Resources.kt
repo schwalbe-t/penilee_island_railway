@@ -23,11 +23,19 @@ val SIGNAL_BOX = ObjLoader(
     Renderer.OBJ_LAYOUT,
     FaceCulling.DISABLED
 )
+val LEVER_BASE = ObjLoader(
+    "res/models/lever_base.obj",
+    Renderer.OBJ_LAYOUT,
+    FaceCulling.DISABLED
+    // theoretically this model allows for face culling, but the floor
+    // was visible through the edges of the model
+)
 
 fun loadAllResources() = loadResources(
     RENDERER_SHADOW_SHADER,
     RENDERER_GEOMETRY_SHADER,
     RENDERER_POST_SHADER,
 
-    SIGNAL_BOX
+    SIGNAL_BOX,
+    LEVER_BASE
 )

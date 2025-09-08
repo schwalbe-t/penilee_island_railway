@@ -14,7 +14,7 @@ import org.lwjgl.system.MemoryUtil.NULL
 import org.lwjgl.opengl.GL33.*
 import org.joml.*
 
-fun initOpenXr(stack: MemoryStack): XrInstance {
+fun initOpenXr(stack: MemoryStack): XrInstance? {
     val appInfo = XrApplicationInfo.calloc(stack).apply {
         applicationName(stack.UTF8("Penilee Island Railway"))
         applicationVersion(1)
@@ -35,7 +35,10 @@ fun initOpenXr(stack: MemoryStack): XrInstance {
     }
     val instancePtr = stack.mallocPointer(1)
     val result = xrCreateInstance(createInfo, instancePtr)
-    check(result == XR_SUCCESS) { "Failed to create XR instance: $result" }
+    if(result != XR_SUCCESS) {
+        println("No OpenXR runtime available")
+        return null
+    }
     return XrInstance(instancePtr.get(0), createInfo)
 }
 
@@ -866,7 +869,8 @@ class VrContext(
 
 fun withVrContext(f: (VrContext) -> Unit): Boolean {
     MemoryStack.stackPush().use { stack ->
-        val instance: XrInstance = initOpenXr(stack)
+        val instance: XrInstance? = initOpenXr(stack)
+        if(instance == null) { return false }
         println("Created OpenXR instance")
         val sysId: Long = selectXrRuntime(stack, instance)
         if(sysId == -1L) { return false }

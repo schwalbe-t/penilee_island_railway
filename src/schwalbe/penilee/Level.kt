@@ -39,6 +39,18 @@ class Level {
             .rotateY(90.degrees)
     )
 
+    val leverBases = listOf(
+        Matrix4f().translate(+1.00f, 0f, -1.5f),
+        Matrix4f().translate(+0.75f, 0f, -1.5f),
+        Matrix4f().translate(+0.50f, 0f, -1.5f),
+        Matrix4f().translate(+0.25f, 0f, -1.5f),
+        Matrix4f().translate( 0.00f, 0f, -1.5f),
+        Matrix4f().translate(-0.25f, 0f, -1.5f),
+        Matrix4f().translate(-0.50f, 0f, -1.5f),
+        Matrix4f().translate(-0.75f, 0f, -1.5f),
+        Matrix4f().translate(-1.00f, 0f, -1.5f)
+    )
+
     fun renderShadows(renderer: Renderer, deltaTime: Float) {
         renderer.renderShadows(SIGNAL_BOX.get(), this.signalBoxes)
     }
@@ -48,6 +60,7 @@ class Level {
         renderer.applyCamera(screenCam)
 
         renderer.render(SIGNAL_BOX.get(), this.signalBoxes)
+        renderer.render(LEVER_BASE.get(), this.leverBases)
 
         renderer.render(SIGNAL_BOX.get(), listOf(
             Matrix4f()
