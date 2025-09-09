@@ -85,9 +85,14 @@ class Lever(
                 .rotateY(this.rotationY)
                 .negate()
             val dot: Float = leverToController.dot(leverDisable)
-            if(clutch >= 0.5f) {
-                this.angle += dot
+            val newAngle: Float = if(clutch >= 0.5f) this.angle + dot
+                else this.angle
+            val reachedEnd: Boolean = (!(this.angle <= 0f) && newAngle <= 0f)
+                || (!(this.angle >= 1f) && newAngle >= 1f)
+            if(reachedEnd) {
+                gripping.controller.vibrate(0.5f, 100_000_000)
             }
+            this.angle = newAngle
             gripping.position = Vector3f(this.interaction.position)
         } else if(!locked && this.interaction.isClosest) {
             this.interaction.locked = Mouse.LEFT.isPressed
@@ -111,9 +116,6 @@ class Lever(
         if(newState != this.state) {
             this.state = newState
             this.onChange(newState)
-            if(gripping != null) {
-                gripping.controller.vibrate(0.5f, 100_000_000)
-            }
         }
         this.updateTransforms()
         this.interaction.position = this.bodyTransform[0]

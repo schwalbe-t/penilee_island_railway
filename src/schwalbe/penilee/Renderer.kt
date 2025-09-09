@@ -93,28 +93,57 @@ class Renderer {
         }
     }
 
-    fun renderShadows(
-        model: Model, modelTransfs: List<Matrix4fc>,
-        texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
+    private fun withInstances(
+        modelTransfs: List<Matrix4fc>, render: (List<Matrix4fc>) -> Unit
     ) {
-        val shader: Shader = RENDERER_SHADOW_SHADER.get()
         var rendered: Int = 0
         while(rendered < modelTransfs.size) {
             val remaining: Int = modelTransfs.size - rendered
             val callSize: Int = min(remaining, Renderer.INSTANCES_PER_CALL)
             val callModelTransfs: List<Matrix4fc> = modelTransfs
                 .slice(rendered..<rendered + callSize)
-            shader.setMatrix4Arr("uModelTransfs", callModelTransfs)
+            render(callModelTransfs)
+            rendered += callSize
+        }
+    }
+
+    fun renderShadows(
+        model: Model, modelTransfs: List<Matrix4fc>,
+        texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
+    ) {
+        val shader: Shader = RENDERER_SHADOW_SHADER.get()
+        this.withInstances(modelTransfs) { call ->
+            shader.setMatrix4Arr("uModelTransfs", call)
             for(light in 0..<this.shadowMaps.layers) {
                 this.shadowMapDest.attachDepth(this.shadowMaps, light)
                 shader.setMatrix4("uViewProj", this.lightViewProj[light])
                 model.render(
-                    shader, this.shadowMapDest, callSize,
+                    shader, this.shadowMapDest, call.size,
                     "uLocalTransf", "uTexture", 
                     DepthTesting.ENABLED, texOverrides
                 )
             }
-            rendered += callSize
+        }
+    }
+
+    fun renderShadows(
+        geometry: Geometry, texture: Texture2, localTransf: Matrix4fc,
+        modelTransfs: List<Matrix4fc>,
+        faceCulling: FaceCulling = FaceCulling.DISABLED
+    ) {
+        val shader: Shader = RENDERER_SHADOW_SHADER.get()
+        shader.setMatrix4("uLocalTransf", localTransf)
+        shader.setTexture2("uTexture", texture)
+        this.withInstances(modelTransfs) { call ->
+            shader.setMatrix4Arr("uModelTransfs", call)
+            for(light in 0..<this.shadowMaps.layers) {
+                this.shadowMapDest.attachDepth(this.shadowMaps, light)
+                shader.setMatrix4("uViewProj", this.lightViewProj[light])
+                geometry.render(
+                    shader, this.shadowMapDest, call.size,
+                    faceCulling, DepthTesting.ENABLED
+                )
+            }
         }
     }
 
@@ -158,19 +187,31 @@ class Renderer {
         texOverrides: Map<Pair<String, String>, Texture2> = mapOf()
     ) {
         val shader: Shader = RENDERER_GEOMETRY_SHADER.get()
-        var rendered: Int = 0
-        while(rendered < modelTransfs.size) {
-            val remaining: Int = modelTransfs.size - rendered
-            val callSize: Int = min(remaining, Renderer.INSTANCES_PER_CALL)
-            val callModelTransfs: List<Matrix4fc> = modelTransfs
-                .slice(rendered..<rendered + callSize)
-            shader.setMatrix4Arr("uModelTransfs", callModelTransfs)
+        this.withInstances(modelTransfs) { call ->
+            shader.setMatrix4Arr("uModelTransfs", call)
             model.render(
-                shader, this.output, callSize,
+                shader, this.output, call.size,
                 "uLocalTransf", "uTexture", 
                 depthTesting, texOverrides
             )
-            rendered += callSize
+        }
+    }
+
+    fun render(
+        geometry: Geometry, texture: Texture2, localTransf: Matrix4fc,
+        modelTransfs: List<Matrix4fc>,
+        faceCulling: FaceCulling = FaceCulling.DISABLED,
+        depthTesting: DepthTesting = DepthTesting.ENABLED
+    ) {
+        val shader: Shader = RENDERER_GEOMETRY_SHADER.get()
+        shader.setMatrix4("uLocalTransf", localTransf)
+        shader.setTexture2("uTexture", texture)
+        this.withInstances(modelTransfs) { call ->
+            shader.setMatrix4Arr("uModelTransfs", call)
+            geometry.render(
+                shader, this.output, call.size,
+                faceCulling, depthTesting
+            )
         }
     }
 

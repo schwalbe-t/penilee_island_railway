@@ -10,7 +10,7 @@ import org.joml.*
 class Level {
 
     val player = Player(
-        Vector3f(),
+        Vector3f(0f, 0f, 1.5f),
         listOf(
             AABB(Vector3f(-2.75f, 0f, -1.75f), Vector3f(2.75f, 0f, 1.75f))
         )
@@ -20,6 +20,10 @@ class Level {
         Hand(VrController.LEFT, Vector3f(-1f, 1f, 1f)), 
         Hand(VrController.RIGHT, Vector3f(1f, 1f, 1f))
     )
+
+    init {
+        hands[1].addCloth()
+    }
 
     val levers: List<Lever> = listOf(
         Lever(
@@ -93,12 +97,12 @@ class Level {
     )
 
     val interactions = Interaction.Manager(levers.map { it.interaction })
-
+    
     fun update(deltaTime: Float, inVr: Boolean, windowCam: Camera) {
         this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
 
-        this.hands.forEach { it.update(inVr, this.player) }
+        this.hands.forEach { it.update(inVr, this.player, deltaTime) }
         interactions.update(this.player, windowCam, this.hands, inVr)
 
         this.levers.forEach { it.update(deltaTime, this.player, windowCam) }

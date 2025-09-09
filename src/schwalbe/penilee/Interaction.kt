@@ -22,7 +22,7 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
 
     class Manager(var interactions: List<Interaction>) {
 
-        fun grippedByHand(hand: Hand): Interaction? {
+        fun grippedByHand(hand: Hand, hands: List<Hand>): Interaction? {
             if(!hand.isActive) { return null }
             var closest: Interaction? = null
             var closestDist: Float = Float.POSITIVE_INFINITY
@@ -34,7 +34,12 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
                 closestDist = dist
                 closest = ia
             }
-            closest?.gripping = hand
+            if(closest == null) { return null }
+            closest.gripping = hand
+            if(hand.cloth == null) {
+                hands.forEach(Hand::removeCloth)
+                hand.addCloth()
+            }
             return closest
         }
 
@@ -70,7 +75,7 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
             var closest: Interaction? = null
             for(hand in hands) {
                 if(closest != null) { break }
-                closest = this.grippedByHand(hand)
+                closest = this.grippedByHand(hand, hands)
 
             }
             if(closest == null && !inVr) {
