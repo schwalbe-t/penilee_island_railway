@@ -3,7 +3,7 @@ A VR game about signalling on an old island railway.
 
 # TEMPORARY NOTES FOR HAND MODEL
 
-- Hand model should have a clotch dangling (held with the thumb?)
+- Hand model should have a cloth dangling (held with the thumb?)
     - CPU cloth simulation (not in handle idle blender model)
     - Cloth is made of nodes, some of which can be given a fixed position
     - The rest is dynamic based on velocity (affected by gravity and changes in position)

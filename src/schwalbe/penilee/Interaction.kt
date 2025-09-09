@@ -10,35 +10,31 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
 
     companion object {
         val MAX_MOUSE_WORLD_DIST: Float = 3f
-        val MAX_VR_GRIP_DIST: Float = 0.5f
+        val MAX_VR_GRIP_DIST: Float = 0.125f
     }
 
 
     var position: Vector3fc = Vector3f()
     var isClosest: Boolean = false
-    var gripping: VrController? = null
+    var gripping: Hand? = null
     var locked: Boolean = false
 
 
     class Manager(var interactions: List<Interaction>) {
 
-        fun grippedByController(
-            player: Player, controller: VrController
-        ): Interaction? {
-            val controllerPos: Vector3fc = Vector3f(controller.gripPos)
-                .rotateY(player.angleY)
-                .add(player.computeHeadPos())
+        fun grippedByHand(hand: Hand): Interaction? {
+            if(!hand.isActive) { return null }
             var closest: Interaction? = null
             var closestDist: Float = Float.POSITIVE_INFINITY
             for(ia in this.interactions) {
-                if(!ia.vrGrippingCond(controller)) { continue }
-                val dist: Float = ia.position.distance(controllerPos)
+                if(!ia.vrGrippingCond(hand.controller)) { continue }
+                val dist: Float = ia.position.distance(hand.position)
                 if(dist > Interaction.MAX_VR_GRIP_DIST) { continue }
                 if(dist >= closestDist) { continue }
                 closestDist = dist
                 closest = ia
             }
-            closest?.gripping = controller
+            closest?.gripping = hand
             return closest
         }
 
@@ -63,18 +59,23 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
             return closest
         }
 
-        fun update(player: Player, camera: Camera, inVr: Boolean) {
+        fun update(
+            player: Player, camera: Camera, hands: List<Hand>, inVr: Boolean
+        ) {
             if(this.interactions.any { it.locked }) { return }
             this.interactions.forEach {
                 it.isClosest = false
                 it.gripping = null
             }
-            val closestVr: Interaction? = if(!inVr) null
-                else this.grippedByController(player, VrController.LEFT)
-                ?: this.grippedByController(player, VrController.RIGHT)
-            val closestNonVr: Interaction? = if(inVr) null
-                else this.closestToMouse(camera.computePos(), camera)
-            val closest = closestVr ?: closestNonVr
+            var closest: Interaction? = null
+            for(hand in hands) {
+                if(closest != null) { break }
+                closest = this.grippedByHand(hand)
+
+            }
+            if(closest == null && !inVr) {
+                closest = this.closestToMouse(camera.computePos(), camera)
+            }
             closest?.isClosest = true
         }
     

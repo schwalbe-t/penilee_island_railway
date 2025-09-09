@@ -1,6 +1,4 @@
 
-#include "common/diffuse.h.glsl"
-
 layout(location = 0) in vec3 vPos;
 layout(location = 1) in vec2 vUv;
 layout(location = 2) in vec3 vNorm;
@@ -13,8 +11,7 @@ uniform mat4 uViewProj;
 
 out vec2 fUv;
 out vec3 fWorldPos;
-out vec3 fNormal;
-out float fDiffuse;
+out vec3 fWorldNormal;
 
 void main() {
     fUv = vUv;
@@ -29,6 +26,5 @@ void main() {
         * vNorm;
     fUv = vUv;
     fWorldPos = worldPos.xyz;
-    fNormal = worldNorm;
-    fDiffuse = diffuseIntensityOf(worldNorm);
+    fWorldNormal = worldNorm;
 }

@@ -43,7 +43,7 @@ class Lever(
         Pair("lever_sign", "lever_sign") to sign.texture.get()
     )
 
-    val interaction = Interaction() { c -> c.trigger >= 0.7f }
+    val interaction = Interaction() { c -> c.squeeze >= 0.7f }
 
     var rotationY: Float = 0.degrees
     var angle: Float = 0f
@@ -75,14 +75,11 @@ class Lever(
 
     fun update(deltaTime: Float, player: Player, windowCam: Camera) {
         val locked: Boolean = this.isLocked()
-        val gripping: VrController? = this.interaction.gripping
+        val gripping: Hand? = this.interaction.gripping
         if(gripping != null) {
-            this.interaction.locked = gripping.trigger > 0.5f
-            this.clutch = 1f
-            val controllerPos: Vector3fc = Vector3f(gripping.gripPos)
-                .rotateY(player.angleY)
-                .add(player.computeHeadPos())
-            val leverToController: Vector3fc = Vector3f(controllerPos)
+            this.interaction.locked = gripping.controller.squeeze > 0.5f
+            this.clutch = gripping.controller.trigger
+            val leverToController: Vector3fc = Vector3f(gripping.position)
                 .sub(this.interaction.position)
             val leverDisable: Vector3f = Vector3f(INTO_SCREEN)
                 .rotateY(this.rotationY)
@@ -91,6 +88,7 @@ class Lever(
             if(clutch >= 0.5f) {
                 this.angle += dot
             }
+            gripping.position = Vector3f(this.interaction.position)
         } else if(!locked && this.interaction.isClosest) {
             this.interaction.locked = Mouse.LEFT.isPressed
                 || Mouse.RIGHT.isPressed
@@ -114,7 +112,7 @@ class Lever(
             this.state = newState
             this.onChange(newState)
             if(gripping != null) {
-                gripping.vibrate(0.5f, 100_000_000)
+                gripping.controller.vibrate(0.5f, 100_000_000)
             }
         }
         this.updateTransforms()

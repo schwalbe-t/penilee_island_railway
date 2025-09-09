@@ -16,6 +16,10 @@ class Level {
         )
     )
     val camera = Camera()
+    val hands = listOf(
+        Hand(VrController.LEFT, Vector3f(-1f, 1f, 1f)), 
+        Hand(VrController.RIGHT, Vector3f(1f, 1f, 1f))
+    )
 
     val levers: List<Lever> = listOf(
         Lever(
@@ -94,7 +98,8 @@ class Level {
         this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
 
-        interactions.update(this.player, windowCam, inVr)
+        this.hands.forEach { it.update(inVr, this.player) }
+        interactions.update(this.player, windowCam, this.hands, inVr)
 
         this.levers.forEach { it.update(deltaTime, this.player, windowCam) }
 
@@ -109,6 +114,7 @@ class Level {
     fun renderShadows(renderer: Renderer, deltaTime: Float) {
         renderer.renderShadows(SIGNAL_BOX.get(), listOf(Matrix4f()))
         this.levers.forEach { it.renderShadows(renderer) }
+        this.hands.forEach { it.renderShadows(renderer) }
     }
 
     fun render(renderer: Renderer, screenCam: Camera, deltaTime: Float) {
@@ -117,21 +123,7 @@ class Level {
 
         renderer.render(SIGNAL_BOX.get(), listOf(Matrix4f()))
         this.levers.forEach { it.render(renderer) }
-
-        renderer.render(SIGNAL_BOX.get(), listOf(
-            Matrix4f()
-                .translate(this.camera.pos)
-                .translate(Vector3f(VrController.RIGHT.gripPos)
-                    .rotateY(this.player.angleY)
-                )
-                .scale(0.01f)
-                .rotateY(this.player.angleY)
-                .rotateTowards(
-                    VrController.RIGHT.gripDir, VrController.RIGHT.gripUp
-                )
-                .rotateZ(180.degrees)
-                .rotateX(90.degrees)
-        ))
+        this.hands.forEach { it.render(renderer) }
     }
 
 }

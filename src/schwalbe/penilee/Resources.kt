@@ -31,6 +31,8 @@ val LEVER_SIGN_NUM_2 = ImageLoader("res/models/lever_sign_2.png")
 val LEVER_SIGN_NUM_3 = ImageLoader("res/models/lever_sign_3.png")
 val LEVER_CLUTCH = ObjLoader("res/models/lever_clutch.obj", Renderer.OBJ_LAYOUT)
 
+val HAND_IDLE = ObjLoader("res/models/hand_idle.obj", Renderer.OBJ_LAYOUT)
+
 fun loadAllResources() = loadResources(
     RENDERER_SHADOW_SHADER,
     RENDERER_GEOMETRY_SHADER,
@@ -39,5 +41,6 @@ fun loadAllResources() = loadResources(
     SIGNAL_BOX,
     LEVER_BASE, LEVER_BODY, LEVER_CLUTCH,
     LEVER_BODY_RED, LEVER_BODY_BLUE, LEVER_BODY_BROWN,
-    LEVER_SIGN_NUM_1, LEVER_SIGN_NUM_2, LEVER_SIGN_NUM_3
+    LEVER_SIGN_NUM_1, LEVER_SIGN_NUM_2, LEVER_SIGN_NUM_3,
+    HAND_IDLE
 )
