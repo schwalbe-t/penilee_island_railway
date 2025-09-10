@@ -32,8 +32,12 @@ class Lever(
         val CLUTCH_OFFSET: Vector3fc = Vector3f(0f, 0.8225f, 0f)
         val CLUTCH_MAX_ANGLE: Float = 15.degrees
         val INTERACTION_OFFSET: Vector3fc = Vector3f(0f, 1.2f, 0f)
+        val GRIP_HAND_OFFSET: Vector3fc = Vector3f(0f, 0f, 0.01f)
+            .add(Lever.INTERACTION_OFFSET)
         val MOUSE_MAX_SELECT_DIST: Float = 0.25f // in NDC
         val MOUSE_MOVE_SPEED: Float = 1f // per second
+        val CLUTCH_ENGAGE: Float = 0.5f
+        val LOCKED_MAX_CLUTCH: Float = 0.25f
     }
 
 
@@ -73,37 +77,58 @@ class Lever(
         return this
     }
 
+    private fun updateGripping(gripping: Hand) {
+        this.interaction.locked = gripping.controller.squeeze > 0.5f
+        val prevClutchEngaged = this.clutch > Lever.CLUTCH_ENGAGE
+        this.clutch = gripping.controller.trigger
+        val clutchEngaged = this.clutch > Lever.CLUTCH_ENGAGE
+        if(this.isLocked()) {
+            if(this.clutch >= Lever.LOCKED_MAX_CLUTCH) {
+                gripping.controller.vibrate(1f, 100_000_000)
+            }
+            this.clutch = min(this.clutch, Lever.LOCKED_MAX_CLUTCH)
+            return
+        }
+        if(prevClutchEngaged != clutchEngaged) {
+            gripping.controller.vibrate(0.5f, 10_000_000)
+        }
+        val leverToController: Vector3fc = Vector3f(gripping.position)
+            .sub(this.interaction.position)
+        val leverEnable: Vector3f = Vector3f(INTO_SCREEN)
+            .rotateY(this.rotationY)
+            .negate()
+        val dot: Float = leverToController.dot(leverEnable)
+        val newAngle: Float = if(clutchEngaged) this.angle + dot else this.angle
+        val reachedEnd: Boolean = (!(this.angle <= 0f) && newAngle <= 0f)
+            || (!(this.angle >= 1f) && newAngle >= 1f)
+        if(reachedEnd) {
+            gripping.controller.vibrate(0.75f, 100_000_000)
+        }
+        this.angle = newAngle
+    }
+
+    private fun updateMouse(deltaTime: Float) {
+        this.interaction.locked = Mouse.LEFT.isPressed
+            || Mouse.RIGHT.isPressed
+        if(this.isLocked()) {
+            this.clutch = 0f
+            return
+        }
+        this.clutch = 1f
+        if(Mouse.LEFT.isPressed && this.angle > 0f) {
+            this.angle -= Lever.MOUSE_MOVE_SPEED * deltaTime
+        }
+        if(Mouse.RIGHT.isPressed && this.angle < 1f) {
+            this.angle += Lever.MOUSE_MOVE_SPEED * deltaTime
+        }
+    }
+
     fun update(deltaTime: Float, player: Player, windowCam: Camera) {
-        val locked: Boolean = this.isLocked()
         val gripping: Hand? = this.interaction.gripping
         if(gripping != null) {
-            this.interaction.locked = gripping.controller.squeeze > 0.5f
-            this.clutch = gripping.controller.trigger
-            val leverToController: Vector3fc = Vector3f(gripping.position)
-                .sub(this.interaction.position)
-            val leverDisable: Vector3f = Vector3f(INTO_SCREEN)
-                .rotateY(this.rotationY)
-                .negate()
-            val dot: Float = leverToController.dot(leverDisable)
-            val newAngle: Float = if(clutch >= 0.5f) this.angle + dot
-                else this.angle
-            val reachedEnd: Boolean = (!(this.angle <= 0f) && newAngle <= 0f)
-                || (!(this.angle >= 1f) && newAngle >= 1f)
-            if(reachedEnd) {
-                gripping.controller.vibrate(0.5f, 100_000_000)
-            }
-            this.angle = newAngle
-            gripping.position = Vector3f(this.interaction.position)
-        } else if(!locked && this.interaction.isClosest) {
-            this.interaction.locked = Mouse.LEFT.isPressed
-                || Mouse.RIGHT.isPressed
-            this.clutch = 1f
-            if(Mouse.LEFT.isPressed && this.angle > 0f) {
-                this.angle -= Lever.MOUSE_MOVE_SPEED * deltaTime
-            }
-            if(Mouse.RIGHT.isPressed && this.angle < 1f) {
-                this.angle += Lever.MOUSE_MOVE_SPEED * deltaTime
-            }
+            this.updateGripping(gripping)
+        } else if(this.interaction.isClosest) {
+            this.updateMouse(deltaTime)
         } else {
             this.clutch = 0f
         }
@@ -120,6 +145,14 @@ class Lever(
         this.updateTransforms()
         this.interaction.position = this.bodyTransform[0]
             .transformPosition(Vector3f(Lever.INTERACTION_OFFSET))
+        if(gripping != null) {
+            gripping.position = this.bodyTransform[0]
+                .transformPosition(Vector3f(Lever.GRIP_HAND_OFFSET))
+            gripping.direction = this.bodyTransform[0]
+                .transformDirection(Vector3f(0f, 1f, 0f))
+            gripping.up = this.bodyTransform[0]
+                .transformDirection(Vector3f(0f, 0f, 1f))
+        }
     }
 
     fun renderShadows(renderer: Renderer) {

@@ -8,16 +8,52 @@ import org.joml.*
 class Cloth(
     origin: Vector3fc, dirX: Vector3fc, dirY: Vector3fc,
     val width: Int, val height: Int, nodeDist: Float,
-    var texture: Texture2, var stiffness: Float, var mass: Float
+    var texture: Texture2, 
+    var stiffness: Float, var mass: Float, var damping: Float,
+    var colliders: List<Collider>
 ) {
 
     companion object {
-        val GRAVITY: Vector3fc = Vector3f(0f, -1f, 0f) // units/s^2
-        val DAMPING: Float = 0.999f // fraction removed from velocity / second
+        val GRAVITY: Vector3fc = Vector3f(0f, -10f, 0f) // units/s^2
         internal val LOCAL_TRANSF: Matrix4fc = Matrix4f()
         internal val MODEL_TRANSF: List<Matrix4fc> = listOf(Matrix4f())
-        internal val MAX_TIMESTEP: Float = 0.001f
+        internal val TIMESTEP: Float = 1f / 500f
         internal val SHEAR_STIFFNESS: Float = 1f // relative to cloth stiffness
+        internal val MAX_COLLIDER_CORR: Float = 0.001f
+    }
+    
+    class Collider(var center: Vector3f, var radius: Float) {
+
+        private var prevCenter: Vector3f = Vector3f(center)
+        private var lerpCenter: Vector3f = Vector3f(center)
+
+        fun update(frameProg: Float) {
+            this.lerpCenter.set(this.center)
+                .sub(this.prevCenter)
+                .mul(frameProg)
+                .add(this.prevCenter)
+        }
+
+        fun endFrame() {
+            this.prevCenter.set(this.center)
+        }
+
+        fun apply(point: Vector3fc): Vector3f {
+            val toPoint: Vector3fc = Vector3f(point).sub(this.lerpCenter)
+            val dist: Float = toPoint.length()
+            if(dist == 0f || dist >= this.radius) { return Vector3f(point) }
+            val newPos: Vector3f = Vector3f(toPoint)
+                .normalize()
+                .mul(this.radius)
+                .add(this.lerpCenter)
+            val correction: Vector3f = Vector3f(newPos).sub(point)
+            val correctionL: Float = correction.length()
+            if(correctionL > Cloth.MAX_COLLIDER_CORR) {
+                correction.div(correctionL).mul(Cloth.MAX_COLLIDER_CORR)
+            }
+            return Vector3f(point).add(correction)
+        }
+
     }
 
 
@@ -25,6 +61,7 @@ class Cloth(
         Node(listOf()) 
     }
 
+    private var remDeltaTime: Float = 0f
     private val nodeIndices: Array<UShort> = Array(this.nodes.size) { 0u }
     private var geometry: Geometry? = null
 
@@ -65,6 +102,7 @@ class Cloth(
                 node.position.set(origin)
                 node.position.add(Vector3f(dirX).mul(x.toFloat() * nodeDist))
                 node.position.sub(Vector3f(dirY).mul(y.toFloat() * nodeDist))
+                node.prevPosition.set(node.position)
             }
         }
     }
@@ -73,10 +111,11 @@ class Cloth(
 
     class Node(var connected: List<Spring>) {
 
+        private var prevFixedAt: Vector3fc? = null
         var fixedAt: Vector3fc? = null
 
+        internal val prevPosition: Vector3f = Vector3f()
         val position: Vector3f = Vector3f()
-        val velocity: Vector3f = Vector3f()
         val force: Vector3f = Vector3f()
 
         fun updateForce(stiffness: Float) {
@@ -96,15 +135,32 @@ class Cloth(
             }
         }
 
-        fun updatePosition(deltaTime: Float, mass: Float) {
-            if(this.fixedAt != null) {
-                this.position.set(this.fixedAt)
-                this.velocity.set(0f, 0f, 0f)
+        fun updatePosition(mass: Float, damping: Float, frameProg: Float) {
+            val fixedAt: Vector3fc? = this.fixedAt
+            if(fixedAt != null) {
+                val prevFixedAt: Vector3fc = this.prevFixedAt ?: fixedAt
+                this.prevPosition.set(this.position)
+                this.position.set(fixedAt)
+                    .sub(prevFixedAt)
+                    .mul(frameProg)
+                    .add(prevFixedAt)
                 return
             }
-            this.velocity.add(Vector3f(this.force).div(mass).mul(deltaTime))
-            this.velocity.mul(1f - Cloth.DAMPING * deltaTime)
-            this.position.add(Vector3f(this.velocity).mul(deltaTime))
+            this.prevFixedAt = null
+            val velocity: Vector3f = Vector3f(this.position)
+                .sub(this.prevPosition)
+                .mul(1f - damping)
+            val acceleration: Vector3f = Vector3f(this.force)
+                .div(mass)
+                .mul(Cloth.TIMESTEP.pow(2))
+            this.prevPosition.set(this.position)
+            this.position.add(velocity).add(acceleration)
+        }
+
+        fun endFrame() {
+            val fixedAt: Vector3fc? = this.fixedAt
+            if(fixedAt == null) { return }
+            this.prevFixedAt = Vector3f(fixedAt)
         }
 
     }
@@ -141,18 +197,29 @@ class Cloth(
         return gb.build()
     }
 
-    private fun advanceNodes(deltaTime: Float) {
-        this.nodes.forEach { it.updateForce(this.stiffness) }
-        this.nodes.forEach { it.updatePosition(deltaTime, this.mass) }
+    private fun advanceNodes(frameProg: Float) {
+        this.nodes.forEach { n -> n.updateForce(this.stiffness) }
+        this.colliders.forEach { c -> c.update(frameProg) }
+        this.nodes.forEach { n ->
+            n.updatePosition(this.mass, this.damping, frameProg) 
+            if(n.fixedAt == null) {
+                this.colliders.forEach { c ->
+                    n.position.set(c.apply(n.position))
+                }
+            }
+        }
     }
 
     fun update(deltaTime: Float) {
-        var remTime: Float = deltaTime
-        while(remTime > 0f) {
-            val step: Float = min(Cloth.MAX_TIMESTEP, remTime)
-            this.advanceNodes(step)
-            remTime -= step
+        this.remDeltaTime += deltaTime
+        val timeSteps: Int = (this.remDeltaTime / Cloth.TIMESTEP).toInt()
+        for(ts in 1..timeSteps) {
+            val frameProg: Float = ts.toFloat() / timeSteps.toFloat()
+            this.advanceNodes(frameProg)
         }
+        this.remDeltaTime -= timeSteps * Cloth.TIMESTEP
+        this.nodes.forEach(Node::endFrame)
+        this.colliders.forEach(Collider::endFrame)
         this.geometry?.destroy()
         this.geometry = this.buildGeometry()
     }

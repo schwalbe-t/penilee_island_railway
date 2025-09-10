@@ -11,6 +11,7 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
     companion object {
         val MAX_MOUSE_WORLD_DIST: Float = 3f
         val MAX_VR_GRIP_DIST: Float = 0.125f
+        val MAX_WORLD_DIST: Float = 3f
     }
 
 
@@ -67,7 +68,13 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
         fun update(
             player: Player, camera: Camera, hands: List<Hand>, inVr: Boolean
         ) {
-            if(this.interactions.any { it.locked }) { return }
+            val camPos: Vector3f = camera.computePos()
+            val anyLocked: Boolean = this.interactions.any {
+                val dist: Float = camPos.distance(it.position)
+                if(dist > Interaction.MAX_WORLD_DIST) { it.locked = false }
+                it.locked
+            }
+            if(anyLocked) { return }
             this.interactions.forEach {
                 it.isClosest = false
                 it.gripping = null
@@ -76,10 +83,9 @@ class Interaction(val vrGrippingCond: (VrController) -> Boolean) {
             for(hand in hands) {
                 if(closest != null) { break }
                 closest = this.grippedByHand(hand, hands)
-
             }
             if(closest == null && !inVr) {
-                closest = this.closestToMouse(camera.computePos(), camera)
+                closest = this.closestToMouse(camPos, camera)
             }
             closest?.isClosest = true
         }

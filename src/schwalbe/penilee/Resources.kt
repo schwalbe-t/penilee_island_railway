@@ -32,6 +32,7 @@ val LEVER_SIGN_NUM_3 = ImageLoader("res/models/lever_sign_3.png")
 val LEVER_CLUTCH = ObjLoader("res/models/lever_clutch.obj", Renderer.OBJ_LAYOUT)
 
 val HAND_IDLE = ObjLoader("res/models/hand_idle.obj", Renderer.OBJ_LAYOUT)
+val HAND_GRIP = ObjLoader("res/models/hand_grip.obj", Renderer.OBJ_LAYOUT)
 
 val CLOTH_PATTERN = ImageLoader("res/models/cloth.png")
 
@@ -44,6 +45,6 @@ fun loadAllResources() = loadResources(
     LEVER_BASE, LEVER_BODY, LEVER_CLUTCH,
     LEVER_BODY_RED, LEVER_BODY_BLUE, LEVER_BODY_BROWN,
     LEVER_SIGN_NUM_1, LEVER_SIGN_NUM_2, LEVER_SIGN_NUM_3,
-    HAND_IDLE,
+    HAND_IDLE, HAND_GRIP,
     CLOTH_PATTERN
 )

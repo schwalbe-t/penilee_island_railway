@@ -31,6 +31,7 @@ class Player(var position: Vector3f, val bounds: List<AABB>) {
         if(Key.A.isPressed) { dpos.sub(right) }
         if(Key.S.isPressed) { dpos.sub(forward) }
         if(Key.D.isPressed) { dpos.add(right) }
+        if(dpos.length() > 0f) { dpos.normalize() }
         return dpos
     }
 
@@ -44,9 +45,7 @@ class Player(var position: Vector3f, val bounds: List<AABB>) {
         ).negate().normalize()
         val dpos: Vector3f = this.getKeyboardDeltaPos(forwardDir, rightDir)
             .add(this.getGamepadDeltaPos(forwardDir, rightDir))
-        if(dpos.length() > 0f) {
-            this.position.add(dpos.normalize().mul(PLAYER_SPEED).mul(deltaTime))
-        }
+        this.position.add(dpos.mul(PLAYER_SPEED).mul(deltaTime))
         for(bound in this.bounds) {
             this.position = bound.insideClosestTo(this.position)
         }

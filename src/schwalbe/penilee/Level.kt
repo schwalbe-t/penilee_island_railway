@@ -22,13 +22,13 @@ class Level {
     )
 
     init {
-        hands[1].addCloth()
+        this.hands.forEach { it.hands = this.hands }
     }
 
     val levers: List<Lever> = listOf(
         Lever(
             Vector3f(-2.00f, 0f, -1.20f), Lever.Color.RED, Lever.Sign.NUM_3,
-            { false }, { state -> }
+            { true }, { state -> }
         ),
         Lever(
             Vector3f(-1.75f, 0f, -1.20f), Lever.Color.BLUE, Lever.Sign.NUM_2,
@@ -101,11 +101,11 @@ class Level {
     fun update(deltaTime: Float, inVr: Boolean, windowCam: Camera) {
         this.player.update(deltaTime, inVr, windowCam)
         this.player.configureCamera(this.camera)
-
-        this.hands.forEach { it.update(inVr, this.player, deltaTime) }
+        
+        this.hands.forEach { it.inheritPosition(this.player) }
         interactions.update(this.player, windowCam, this.hands, inVr)
-
         this.levers.forEach { it.update(deltaTime, this.player, windowCam) }
+        this.hands.forEach { it.update(inVr, deltaTime) }
 
         if(VrController.Button.STICK_L.isPressed) {
             VrController.LEFT.vibrate(1.0f, 100_000_000)
