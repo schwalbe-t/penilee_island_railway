@@ -1,6 +1,7 @@
 
 plugins {
     kotlin("jvm") version "2.2.10"
+    kotlin("plugin.serialization") version "2.2.10"
     application
 }
 
@@ -11,6 +12,7 @@ repositories {
 val lwjglVersion = "3.3.3"
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation(platform("org.lwjgl:lwjgl-bom:$lwjglVersion"))
     implementation("org.lwjgl:lwjgl")
     implementation("org.lwjgl:lwjgl-glfw")

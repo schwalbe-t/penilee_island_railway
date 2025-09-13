@@ -9,7 +9,7 @@ import org.joml.*
 import kotlin.math.*
 
 class Lever(
-    val basePosition: Vector3f, color: Color, sign: Sign,
+    var basePosition: Vector3f, color: Color, sign: Sign,
     val isLocked: () -> Boolean, val onChange: (Boolean) -> Unit
 ) {
 
@@ -27,6 +27,8 @@ class Lever(
     
 
     companion object {
+        val WIDTH: Float = 0.25f
+        val DEPTH: Float = 1.00f
         val MAX_ANGLE: Float = 10.degrees
         val ROTATION_ANCHOR_OFFSET: Vector3fc = Vector3f(0f, -2f, 0f)
         val CLUTCH_OFFSET: Vector3fc = Vector3f(0f, 0.8225f, 0f)

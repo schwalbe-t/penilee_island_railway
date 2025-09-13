@@ -1,0 +1,29 @@
+{
+    "name": "Test",
+    "ground": "levels/test/ground.obj",
+    "hasWater": true,
+    "layout": "levels/test/layout.txt",
+    "signalBox": {
+        "type": "small",
+        "pos": [92.5, 1.0, 30],
+        "dir": "north"
+    },
+    "renderer": {
+        "background": [141, 183, 255],
+        "suns": [
+            {
+                "dir": [-1, -1, 1],
+                "target": [92.5, 0, 30],
+                "up": [0, 1, 0],
+                "radius": 25,
+                "dist": 200
+            }
+        ],
+        "lights": [],
+        "shadowMapRes": 4096,
+        "depthBias": 0.00025,
+        "normalOffset": 0.055,
+        "outsideShadowMapLit": true,
+        "sunDir": [-1, -1, 1]
+    }
+}

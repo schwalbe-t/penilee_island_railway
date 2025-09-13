@@ -59,7 +59,7 @@ class Renderer {
         lights: List<Matrix4fc>, 
         shadowMapRes: Int,
         depthBias: Float, normalOffset: Float, 
-        outOfBoundsLit: Boolean, sunDirection: Vector3f
+        outsideShadowMapLit: Boolean, sunDirection: Vector3f
     ) {
         check(lights.size <= Renderer.MAX_LIGHTS) {
             "Renderer only allows rendering ${Renderer.MAX_LIGHTS} light(s)"
@@ -80,7 +80,7 @@ class Renderer {
             .setTexture3("uShadowMaps", this.shadowMaps)
             .setFloat("uShadowDepthBias", depthBias)
             .setFloat("uShadowNormalOffset", normalOffset)
-            .setInt("uOutOfBoundsLit", if(outOfBoundsLit) 1 else 0)
+            .setInt("uOutOfBoundsLit", if(outsideShadowMapLit) 1 else 0)
             .setVec3("uSunDirection", sunDirection)
         this.lightViewProj = lights
     }

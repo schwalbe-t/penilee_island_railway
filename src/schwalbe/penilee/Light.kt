@@ -54,9 +54,13 @@ fun Light.Companion.sunFromTowards(
 
 fun Light.Companion.sunAlongTowards(
     direction: Vector3fc, towards: Vector3fc, up: Vector3fc = UP,
-    radius: Float, distance: Float
+    radius: Float, distance: Float, distanceFactor: Float = 2f
 ): Matrix4f = Light.sunFromAlong(
-    from = Vector3f(direction).normalize().mul(distance).negate().add(towards),
+    from = Vector3f(direction)
+        .normalize()
+        .mul(distance / distanceFactor)
+        .negate()
+        .add(towards),
     direction = direction,
     up = up,
     radius = radius,

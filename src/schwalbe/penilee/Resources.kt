@@ -19,8 +19,6 @@ val RENDERER_POST_SHADER = GlslLoader(
 )
 
 
-val SIGNAL_BOX = ObjLoader("res/models/signal_box.obj", Renderer.OBJ_LAYOUT)
-
 val LEVER_BASE = ObjLoader("res/models/lever_base.obj", Renderer.OBJ_LAYOUT)
 val LEVER_BODY = ObjLoader("res/models/lever_body.obj", Renderer.OBJ_LAYOUT)
 val LEVER_BODY_RED = ImageLoader("res/models/lever_body_red.png")
@@ -36,15 +34,30 @@ val HAND_GRIP = ObjLoader("res/models/hand_grip.obj", Renderer.OBJ_LAYOUT)
 
 val CLOTH_PATTERN = ImageLoader("res/models/cloth.png")
 
+
+val SIGNAL_BOX = ObjLoader("res/models/signal_box.obj", Renderer.OBJ_LAYOUT)
+
+val RAIL_STRAIGHT = ObjLoader(
+    "res/models/rails/rail_straight.obj", Renderer.OBJ_LAYOUT
+)
+val RAIL_DIAGONAL = ObjLoader(
+    "res/models/rails/rail_diagonal.obj", Renderer.OBJ_LAYOUT
+)
+val RAIL_CURVE = ObjLoader(
+    "res/models/rails/rail_curve.obj", Renderer.OBJ_LAYOUT
+)
+
 fun loadAllResources() = loadResources(
     RENDERER_SHADOW_SHADER,
     RENDERER_GEOMETRY_SHADER,
     RENDERER_POST_SHADER,
 
-    SIGNAL_BOX,
     LEVER_BASE, LEVER_BODY, LEVER_CLUTCH,
     LEVER_BODY_RED, LEVER_BODY_BLUE, LEVER_BODY_BROWN,
     LEVER_SIGN_NUM_1, LEVER_SIGN_NUM_2, LEVER_SIGN_NUM_3,
     HAND_IDLE, HAND_GRIP,
-    CLOTH_PATTERN
+    CLOTH_PATTERN,
+
+    SIGNAL_BOX,
+    RAIL_STRAIGHT, RAIL_DIAGONAL, RAIL_CURVE
 )
