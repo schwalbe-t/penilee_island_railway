@@ -20,7 +20,7 @@
             }
         ],
         "lights": [],
-        "shadowMapRes": 4096,
+        "shadowMapRes": 2048,
         "depthBias": 0.00025,
         "normalOffset": 0.055,
         "outsideShadowMapLit": true,

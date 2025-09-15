@@ -3,3 +3,4 @@ replay_pid*
 .kotlin/
 .gradle/
 build/
+bin/

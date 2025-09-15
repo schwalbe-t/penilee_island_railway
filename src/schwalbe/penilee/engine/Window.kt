@@ -47,8 +47,6 @@ class Window: Texture {
         this.originalHeight = height
         glfwMakeContextCurrent(this.id)
         this.captureInput()
-        this.isFullscreen = true
-        this.makeWindowed()
         GL.createCapabilities()
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
@@ -84,29 +82,27 @@ class Window: Texture {
         glfwHideWindow(this.id)
     }
 
-    fun makeFullscreen() {
-        if(this.isFullscreen) { return }
+    fun makeFullscreen(fullscreen: Boolean = true) {
         val monitorId: Long = glfwGetPrimaryMonitor()
         check(monitorId != 0L) { "Failed to get primary monitor" }
         val mode: GLFWVidMode = glfwGetVideoMode(monitorId)
             ?: throw RuntimeException("Failed to get video mode")
-        glfwSetWindowMonitor(
-            this.id, monitorId, 0, 0, mode.width(), mode.height(), 0
-        )
-        this.isFullscreen = true
+        if(fullscreen) {
+            glfwSetWindowMonitor(
+                this.id, monitorId, 0, 0, mode.width(), mode.height(), 0
+            )
+        } else {
+            val x = (mode.width() - this.originalWidth) / 2
+            val y = (mode.height() - this.originalHeight) / 2
+            glfwSetWindowMonitor(
+                this.id, 0, x, y, this.originalWidth, this.originalHeight, 0
+            )
+        }
+        this.isFullscreen = fullscreen
     }
-    fun makeWindowed() {
-        if(!this.isFullscreen) { return }
-        val monitorId: Long = glfwGetPrimaryMonitor()
-        check(monitorId != 0L) { "Failed to get primary monitor" }
-        val mode: GLFWVidMode = glfwGetVideoMode(monitorId)
-            ?: throw RuntimeException("Failed to get video mode")
-        val x = (mode.width() - this.originalWidth) / 2
-        val y = (mode.height() - this.originalHeight) / 2
-        glfwSetWindowMonitor(
-            this.id, 0, x, y, this.originalWidth, this.originalHeight, 0
-        )
-        this.isFullscreen = false
+
+    fun enableVSync(vsyncEnabled: Boolean = true) {
+        glfwSwapInterval(if(vsyncEnabled) 1 else 0)
     }
 
     fun shouldClose(): Boolean = glfwWindowShouldClose(this.id)

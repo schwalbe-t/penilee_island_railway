@@ -3,6 +3,7 @@ package schwalbe.penilee
 
 import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.gfx.*
+import schwalbe.penilee.engine.input.Key
 import schwalbe.penilee.level.loadLevelConfigs
 import schwalbe.penilee.level.Level
 import schwalbe.penilee.resources.loadAllResources
@@ -17,7 +18,11 @@ fun main() {
     val renderer = Renderer()
     CURRENT_LEVEL = levels[0].toLevel(renderer)
     window.show()
+    window.makeFullscreen(false)
     val update: (Boolean) -> (Float, Camera) -> Unit = { inVr -> { dt, winCam ->
+        if(Key.F11.wasReleased) {
+            window.makeFullscreen(!window.isFullscreen) 
+        }
         CURRENT_LEVEL?.update(dt, inVr, winCam)
         renderer.clearShadows()
         CURRENT_LEVEL?.renderShadows(renderer, dt)
@@ -31,6 +36,7 @@ fun main() {
         vr.runLoop(window, update(true), render)
     }
     if(!vrContext) {
+        window.enableVSync()
         window.runLoop(DEFAULT_FOV, update(false), render)
     }
     renderer.destroy()
