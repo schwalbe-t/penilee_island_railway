@@ -19,18 +19,28 @@ val RENDERER_POST_SHADER = GlslLoader(
 )
 
 
-val LEVER_BASE = ObjLoader("res/models/lever_base.obj", Renderer.OBJ_LAYOUT)
-val LEVER_BODY = ObjLoader("res/models/lever_body.obj", Renderer.OBJ_LAYOUT)
+val LEVER_BASE = ObjLoader(
+    "res/models/lever_base.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
+)
+val LEVER_BODY = ObjLoader(
+    "res/models/lever_body.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
+)
 val LEVER_BODY_RED = ImageLoader("res/models/lever_body_red.png")
 val LEVER_BODY_BLUE = ImageLoader("res/models/lever_body_blue.png")
 val LEVER_BODY_BROWN = ImageLoader("res/models/lever_body_brown.png")
 val LEVER_SIGN_NUM_1 = ImageLoader("res/models/lever_sign_1.png")
 val LEVER_SIGN_NUM_2 = ImageLoader("res/models/lever_sign_2.png")
 val LEVER_SIGN_NUM_3 = ImageLoader("res/models/lever_sign_3.png")
-val LEVER_CLUTCH = ObjLoader("res/models/lever_clutch.obj", Renderer.OBJ_LAYOUT)
+val LEVER_CLUTCH = ObjLoader(
+    "res/models/lever_clutch.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
+)
 
-val HAND_IDLE = ObjLoader("res/models/hand_idle.obj", Renderer.OBJ_LAYOUT)
-val HAND_GRIP = ObjLoader("res/models/hand_grip.obj", Renderer.OBJ_LAYOUT)
+val HAND_IDLE = ObjLoader(
+    "res/models/hand_idle.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
+)
+val HAND_GRIP = ObjLoader(
+    "res/models/hand_grip.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
+)
 
 val CLOTH_PATTERN = ImageLoader("res/models/cloth.png")
 
@@ -38,10 +48,10 @@ val CLOTH_PATTERN = ImageLoader("res/models/cloth.png")
 val SIGNAL_BOX = ObjLoader("res/models/signal_box.obj", Renderer.OBJ_LAYOUT)
 
 val RAIL_STRAIGHT = ObjLoader(
-    "res/models/rails/rail_straight.obj", Renderer.OBJ_LAYOUT
+    "res/models/rails/rail_straight.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
 )
 val RAIL_DIAGONAL = ObjLoader(
-    "res/models/rails/rail_diagonal.obj", Renderer.OBJ_LAYOUT
+    "res/models/rails/rail_diagonal.obj", Renderer.OBJ_LAYOUT, FaceCulling.BACK
 )
 val RAIL_CURVE = ObjLoader(
     "res/models/rails/rail_curve.obj", Renderer.OBJ_LAYOUT

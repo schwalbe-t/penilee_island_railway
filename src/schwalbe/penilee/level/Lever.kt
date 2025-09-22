@@ -4,13 +4,15 @@ package schwalbe.penilee
 import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.gfx.*
 import schwalbe.penilee.engine.input.*
+import schwalbe.penilee.network.*
 import schwalbe.penilee.resources.*
 import org.joml.*
 import kotlin.math.*
 
 class Lever(
     var basePosition: Vector3f, color: Color, sign: Sign,
-    val isLocked: () -> Boolean, val onChange: (Boolean) -> Unit
+    val isLocked: () -> Layout.LeverHandler.LockReason?, 
+    val onChange: (Boolean) -> Unit
 ) {
 
     enum class Color(val texture: ImageLoader) {
@@ -84,7 +86,7 @@ class Lever(
         val prevClutchEngaged = this.clutch > Lever.CLUTCH_ENGAGE
         this.clutch = gripping.controller.trigger
         val clutchEngaged = this.clutch > Lever.CLUTCH_ENGAGE
-        if(this.isLocked()) {
+        if(this.isLocked() != null) {
             if(this.clutch >= Lever.LOCKED_MAX_CLUTCH) {
                 gripping.controller.vibrate(1f, 100_000_000)
             }
@@ -112,7 +114,7 @@ class Lever(
     private fun updateMouse(deltaTime: Float) {
         this.interaction.locked = Mouse.LEFT.isPressed
             || Mouse.RIGHT.isPressed
-        if(this.isLocked()) {
+        if(this.isLocked() != null) {
             this.clutch = 0f
             return
         }

@@ -50,9 +50,7 @@ class SignalBox(
                     "'${this.type}' is not a known signal box type"
                 )
             }
-            val pos = Vector3f(
-                pos[0], pos[1], pos[2]
-            )
+            val pos = Vector3f(this.pos[0], this.pos[1], this.pos[2])
             val rotationY: Float = when(this.dir) {
                 "north" -> 0.degrees
                 "west" -> 90.degrees

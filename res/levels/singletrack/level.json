@@ -1,0 +1,29 @@
+{
+    "name": "Single-Tracked Branchline",
+    "ground": "levels/singletrack/ground.obj",
+    "hasWater": true,
+    "layout": "levels/singletrack/layout.txt",
+    "signalBox": {
+        "type": "small",
+        "pos": [82.5, 1.0, 7.5],
+        "dir": "south"
+    },
+    "renderer": {
+        "background": [141, 183, 255],
+        "suns": [
+            {
+                "dir": [-1, -1, 1],
+                "target": [82.5, 1.0, 7.5],
+                "up": [0, 1, 0],
+                "radius": 25,
+                "dist": 200
+            }
+        ],
+        "lights": [],
+        "shadowMapRes": 2048,
+        "depthBias": 0.00025,
+        "normalOffset": 0.055,
+        "outsideShadowMapLit": true,
+        "sunDir": [-1, -1, 1]
+    }
+}

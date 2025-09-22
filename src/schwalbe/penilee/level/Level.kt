@@ -3,6 +3,7 @@ package schwalbe.penilee.level
 
 import schwalbe.penilee.*
 import schwalbe.penilee.network.*
+import schwalbe.penilee.network.parser.parseTrackLayout
 import schwalbe.penilee.engine.*
 import schwalbe.penilee.engine.input.*
 import schwalbe.penilee.engine.gfx.*
@@ -31,9 +32,8 @@ class Level(
             val groundM: Model = ObjLoader(groundP, Renderer.OBJ_LAYOUT).load()
             val layoutR: String = "res/" + this.layout
             val layoutP: Layout = parseTrackLayout(File(layoutR).readText())
-            val signalBox: SignalBox = this.signalBox.toSignalBox(
-                layoutP.createLevers()
-            )
+            val signalBox: SignalBox = this.signalBox
+                .toSignalBox(layoutP.levers)
             this.renderer.applyTo(r)
             return Level(groundM, this.hasWater, layoutP, signalBox)
         }
@@ -110,7 +110,8 @@ class Level(
     val camera = Camera()
     val player = Player(
         this.signalBox.transform.transformPosition(Vector3f(0f, 0f, 0f)), 
-        this.signalBox.computeBounds()
+        //this.signalBox.computeBounds()
+        listOf()
     )
     val hands = listOf(
         Hand(VrController.LEFT, Vector3f(-1f, 1f, 1f)), 
